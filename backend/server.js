@@ -12,7 +12,7 @@ const pemeriksaanRoutes = require('./routes/pemeriksaanRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 
 const app = express();
-const port = Number(process.env.PORT || 3000);
+const port = Number(process.env.PORT || 8080);
 
 app.use(helmet());
 app.use(cors());
@@ -48,6 +48,6 @@ app.use((error, req, res, next) => {
   });
 });
 
-app.listen(port, () => {
+app.listen(port, '0.0.0.0', () => { //cloud runnya ke 0.0.0.0
   console.log(`Telemedicine Posyandu API running on port ${port}`);
 });

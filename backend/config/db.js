@@ -13,7 +13,6 @@ const dbConfig = {
   connectionLimit: 10,
   queueLimit: 0,
   dateStrings: true,
-  
 };
 
 

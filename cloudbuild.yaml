@@ -27,7 +27,9 @@ steps:
         'us-central1',
         '--port',
         '8080',
-        '--allow-unauthenticated'
+        '--allow-unauthenticated',
+        '--set-env-vars',
+        'DB_HOST=34.42.191.35,DB_PORT=3306,DB_USER=telemed,DB_PASSWORD=Telemed123!,DB_NAME=telemedicine_posyandu,DB_SSL=true,JWT_SECRET=ganti_dengan_secret_yang_panjang'
       ]
 
 options:
