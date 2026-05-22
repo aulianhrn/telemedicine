@@ -3,3 +3,5 @@ node_modules/
 npm-debug.log*
 uploads/profile/*
 !uploads/profile/.gitkeep
+uploads/anak/*
+!uploads/anak/.gitkeep
