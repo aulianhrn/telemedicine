@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:telemedicine/app_routes.dart';
+import 'package:telemedicine/services/api_service.dart';
+import 'package:telemedicine/services/formatters.dart';
+import 'package:telemedicine/services/session_manager.dart';
 import 'package:telemedicine/widgets/bottom_navbar.dart';
 
 class HomePage extends StatefulWidget {
@@ -183,6 +186,14 @@ class ArticleCard extends StatelessWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  late Future<Map<String, dynamic>> dashboardFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    dashboardFuture = ApiService.dashboard();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -201,250 +212,290 @@ class _HomePageState extends State<HomePage> {
           : null,
 
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
+        child: FutureBuilder<Map<String, dynamic>>(
+          future: dashboardFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              /// HEADER
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            if (snapshot.hasError) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Text(
+                    snapshot.error.toString().replaceFirst('Exception: ', ''),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              );
+            }
+
+            final user = SessionManager.user;
+            final anak = snapshot.data?['anak_utama'] as Map<String, dynamic>?;
+            final imunisasi =
+                snapshot.data?['imunisasi_mendatang'] as Map<String, dynamic>?;
+            final childName =
+                anak?['nama']?.toString() ?? 'Belum ada data anak';
+            final statusGizi =
+                anak?['status_gizi']?.toString() ?? 'Belum diperiksa';
+
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  /// HEADER
                   Row(
-                    children: [
-                      const CircleAvatar(
-                        radius: 24,
-                        backgroundImage: NetworkImage(
-                          'https://lh3.googleusercontent.com/aida-public/AB6AXuDx0T2r31_IRbKTZXEe_zOL1tB4mJjiGDil6y75PEdh5rxOb-H5gmGh6EcNa3KAFhGCfBxMpKrQ0_F6u7WDLQ1woJBZC_gjy4Bqca8nfUIhKvNfOJK6its0Rk9dkJ4MzydQHzdKhck7Df0-uczaIKw64xISqcipdxhg-Zr338KMwt8QXw9nd3xOsT4suL5uHL-QHP20az_jig3K4fJPFp9ySUWC7WiXy2grj0FbGMkbCkodBDhuwmlV6cxNLUffCJ-kg1S_n1zdAjc',
-                        ),
-                      ),
-
-                      const SizedBox(width: 12),
-
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
-                          Text(
-                            'Selamat pagi,',
-                            style: TextStyle(color: Colors.grey, fontSize: 12),
-                          ),
-
-                          Text(
-                            'Halo, Bunda Sarah!',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 20,
-                              color: Color(0xFF006E2F),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-
-                  IconButton(
-                    onPressed: () {},
-                    icon: const Icon(
-                      Icons.notifications_outlined,
-                      color: Color(0xFF006E2F),
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 24),
-
-              /// CHILD CARD
-              InkWell(
-                borderRadius: BorderRadius.circular(20),
-                onTap: () {
-                  Navigator.pushNamed(context, AppRoutes.childProfile);
-                },
-                child: Container(
-                  padding: const EdgeInsets.all(20),
-
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.grey.shade200),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.03),
-                        blurRadius: 10,
-                      ),
-                    ],
-                  ),
-
-                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Row(
                         children: [
-                          Container(
-                            width: 52,
-                            height: 52,
-                            decoration: BoxDecoration(
-                              color: const Color(
-                                0xFF22C55E,
-                              ).withValues(alpha: 0.2),
-                              shape: BoxShape.circle,
-                            ),
-
-                            child: const Icon(
-                              Icons.child_care,
-                              color: Color(0xFF006E2F),
-                              size: 30,
+                          const CircleAvatar(
+                            radius: 24,
+                            backgroundImage: NetworkImage(
+                              'https://lh3.googleusercontent.com/aida-public/AB6AXuDx0T2r31_IRbKTZXEe_zOL1tB4mJjiGDil6y75PEdh5rxOb-H5gmGh6EcNa3KAFhGCfBxMpKrQ0_F6u7WDLQ1woJBZC_gjy4Bqca8nfUIhKvNfOJK6its0Rk9dkJ4MzydQHzdKhck7Df0-uczaIKw64xISqcipdxhg-Zr338KMwt8QXw9nd3xOsT4suL5uHL-QHP20az_jig3K4fJPFp9ySUWC7WiXy2grj0FbGMkbCkodBDhuwmlV6cxNLUffCJ-kg1S_n1zdAjc',
                             ),
                           ),
 
                           const SizedBox(width: 12),
 
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Selamat pagi,',
+                                style: TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 12,
+                                ),
+                              ),
+
+                              Text(
+                                'Halo, ${user?['nama'] ?? 'Bunda'}!',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 20,
+                                  color: Color(0xFF006E2F),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+
+                      IconButton(
+                        onPressed: () {},
+                        icon: const Icon(
+                          Icons.notifications_outlined,
+                          color: Color(0xFF006E2F),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  /// CHILD CARD
+                  InkWell(
+                    borderRadius: BorderRadius.circular(20),
+                    onTap: () {
+                      Navigator.pushNamed(context, AppRoutes.childProfile);
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(20),
+
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.grey.shade200),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.03),
+                            blurRadius: 10,
+                          ),
+                        ],
+                      ),
+
+                      child: Column(
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                width: 52,
+                                height: 52,
+                                decoration: BoxDecoration(
+                                  color: const Color(
+                                    0xFF22C55E,
+                                  ).withValues(alpha: 0.2),
+                                  shape: BoxShape.circle,
+                                ),
+
+                                child: const Icon(
+                                  Icons.child_care,
+                                  color: Color(0xFF006E2F),
+                                  size: 30,
+                                ),
+                              ),
+
+                              const SizedBox(width: 12),
+
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      childName,
+                                      style: const TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+
+                                    Text(
+                                      childAge(anak?['tanggal_lahir']),
+                                      style: const TextStyle(
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 6,
+                                ),
+
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF22C55E),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+
+                                child: Text(
+                                  statusGizi,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          const SizedBox(height: 20),
+
+                          Row(
+                            children: [
+                              Expanded(
+                                child: InfoBox(
+                                  title: 'Berat Badan',
+                                  value: anak?['berat_badan'] == null
+                                      ? '-'
+                                      : '${anak!['berat_badan']} kg',
+                                ),
+                              ),
+
+                              const SizedBox(width: 12),
+
+                              Expanded(
+                                child: InfoBox(
+                                  title: 'Tinggi Badan',
+                                  value: anak?['tinggi_badan'] == null
+                                      ? '-'
+                                      : '${anak!['tinggi_badan']} cm',
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  /// IMMUNIZATION CARD
+                  InkWell(
+                    borderRadius: BorderRadius.circular(20),
+                    onTap: () {
+                      if (widget.onTabSelected != null) {
+                        widget.onTabSelected!(1);
+                        return;
+                      }
+
+                      Navigator.pushNamed(context, AppRoutes.imunisasi);
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(18),
+
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF7ED4FD).withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 52,
+                            height: 52,
+
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF006686),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+
+                            child: const Icon(
+                              Icons.calendar_today,
+                              color: Colors.white,
+                            ),
+                          ),
+
+                          const SizedBox(width: 16),
+
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
-                              children: const [
-                                Text(
-                                  'Arka',
+                              children: [
+                                const Text(
+                                  'IMUNISASI MENDATANG',
                                   style: TextStyle(
-                                    fontSize: 20,
+                                    fontSize: 12,
+                                    color: Color(0xFF006686),
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+
+                                SizedBox(height: 4),
+
+                                Text(
+                                  imunisasi?['nama_vaksin']?.toString() ??
+                                      'Belum ada jadwal',
+                                  style: const TextStyle(
+                                    fontSize: 18,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
 
                                 Text(
-                                  '2 Tahun 4 Bulan',
-                                  style: TextStyle(color: Colors.grey),
+                                  displayDate(imunisasi?['tanggal_jadwal']),
+                                  style: const TextStyle(color: Colors.grey),
                                 ),
                               ],
                             ),
                           ),
 
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 6,
-                            ),
-
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF22C55E),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-
-                            child: const Text(
-                              'Gizi Baik',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
+                          const Icon(Icons.chevron_right),
                         ],
                       ),
-
-                      const SizedBox(height: 20),
-
-                      Row(
-                        children: const [
-                          Expanded(
-                            child: InfoBox(
-                              title: 'Berat Badan',
-                              value: '12.5 kg',
-                            ),
-                          ),
-
-                          SizedBox(width: 12),
-
-                          Expanded(
-                            child: InfoBox(
-                              title: 'Tinggi Badan',
-                              value: '88.0 cm',
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+                    ),
                   ),
-                ),
+                ],
               ),
-
-              const SizedBox(height: 20),
-
-              /// IMMUNIZATION CARD
-              InkWell(
-                borderRadius: BorderRadius.circular(20),
-                onTap: () {
-                  if (widget.onTabSelected != null) {
-                    widget.onTabSelected!(1);
-                    return;
-                  }
-
-                  Navigator.pushNamed(context, AppRoutes.imunisasi);
-                },
-                child: Container(
-                  padding: const EdgeInsets.all(18),
-
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF7ED4FD).withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 52,
-                        height: 52,
-
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF006686),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-
-                        child: const Icon(
-                          Icons.calendar_today,
-                          color: Colors.white,
-                        ),
-                      ),
-
-                      const SizedBox(width: 16),
-
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: const [
-                            Text(
-                              'IMUNISASI MENDATANG',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Color(0xFF006686),
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-
-                            SizedBox(height: 4),
-
-                            Text(
-                              'Vaksin PCV 3',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-
-                            Text(
-                              '15 Oktober 2023',
-                              style: TextStyle(color: Colors.grey),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      const Icon(Icons.chevron_right),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );

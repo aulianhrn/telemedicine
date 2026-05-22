@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:telemedicine/app_routes.dart';
+import 'package:telemedicine/services/api_service.dart';
+import 'package:telemedicine/services/formatters.dart';
 import 'package:telemedicine/widgets/bottom_navbar.dart';
 
 class ProfilePage extends StatelessWidget {
@@ -9,32 +11,24 @@ class ProfilePage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FF),
-
-      // ================= APP BAR =================
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
         titleSpacing: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Color(0xFF006E2F)),
-          onPressed: () {
-            Navigator.pop(context);
-          },
+          onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
-          "Profil Arka",
+          "Profil Anak",
           style: TextStyle(
             color: Color(0xFF006E2F),
             fontWeight: FontWeight.bold,
           ),
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_none, color: Colors.black54),
-            onPressed: () {},
-          ),
+        actions: const [
           Padding(
-            padding: const EdgeInsets.only(right: 16),
+            padding: EdgeInsets.only(right: 16),
             child: CircleAvatar(
               radius: 20,
               backgroundImage: NetworkImage("https://i.pravatar.cc/150?img=47"),
@@ -42,22 +36,43 @@ class ProfilePage extends StatelessWidget {
           ),
         ],
       ),
+      body: FutureBuilder<List<dynamic>>(
+        future: ApiService.anak(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-      // ================= BODY =================
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            // ================= PROFILE CARD =================
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
+          if (snapshot.hasError) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(
+                  snapshot.error.toString().replaceFirst('Exception: ', ''),
+                  textAlign: TextAlign.center,
+                ),
               ),
-              child: Column(
-                children: [
-                  Stack(
+            );
+          }
+
+          final children = snapshot.data ?? [];
+          if (children.isEmpty) {
+            return const Center(child: Text("Belum ada data anak."));
+          }
+
+          final child = Map<String, dynamic>.from(children.first as Map);
+
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Column(
                     children: [
                       Container(
                         width: 120,
@@ -73,278 +88,199 @@ class ProfilePage extends StatelessWidget {
                           ),
                         ),
                       ),
-
-                      Positioned(
-                        bottom: 0,
-                        right: 0,
-                        child: Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            color: Colors.green,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 2),
-                          ),
-                          child: const Icon(
-                            Icons.edit,
-                            color: Colors.white,
-                            size: 18,
-                          ),
+                      const SizedBox(height: 16),
+                      Text(
+                        child['nama']?.toString() ?? "-",
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  const Text(
-                    "Arka Wijaya",
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
-                      Icon(Icons.cake, size: 18, color: Colors.grey),
-                      SizedBox(width: 6),
-                      Text(
-                        "28 Bulan (2 Tahun 4 Bulan)",
-                        style: TextStyle(color: Colors.grey),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.green.shade100,
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                    child: const Text(
-                      "Status Gizi: Normal",
-                      style: TextStyle(
-                        color: Colors.green,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // ================= STATS =================
-            Row(
-              children: [
-                Expanded(
-                  child: statCard(
-                    icon: Icons.straighten,
-                    title: "Tinggi Badan",
-                    value: "88 cm",
-                    subtitle: "+1.2 cm bln lalu",
-                    iconColor: Colors.blue,
-                  ),
-                ),
-
-                const SizedBox(width: 12),
-
-                Expanded(
-                  child: statCard(
-                    icon: Icons.monitor_weight,
-                    title: "Berat Badan",
-                    value: "12.5 kg",
-                    subtitle: "+0.3 kg bln lalu",
-                    iconColor: Colors.pink,
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 16),
-
-            // ================= GROWTH CHART =================
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.cake, size: 18, color: Colors.grey),
+                          const SizedBox(width: 6),
                           Text(
-                            "Grafik Pertumbuhan",
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          SizedBox(height: 4),
-                          Text(
-                            "Berdasarkan standar WHO",
-                            style: TextStyle(color: Colors.grey),
+                            childAge(child['tanggal_lahir']),
+                            style: const TextStyle(color: Colors.grey),
                           ),
                         ],
                       ),
-
+                      const SizedBox(height: 12),
                       Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 8,
+                        ),
                         decoration: BoxDecoration(
-                          color: Colors.grey.shade200,
-                          borderRadius: BorderRadius.circular(12),
+                          color: Colors.green.shade100,
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        child: Text(
+                          "Status Gizi: ${child['status_gizi'] ?? '-'}",
+                          style: const TextStyle(
+                            color: Colors.green,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: statCard(
+                        icon: Icons.straighten,
+                        title: "Tinggi Badan",
+                        value: child['tinggi_badan'] == null
+                            ? "-"
+                            : "${child['tinggi_badan']} cm",
+                        subtitle:
+                            "Terakhir ${displayDate(child['tanggal_pemeriksaan'])}",
+                        iconColor: Colors.blue,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: statCard(
+                        icon: Icons.monitor_weight,
+                        title: "Berat Badan",
+                        value: child['berat_badan'] == null
+                            ? "-"
+                            : "${child['berat_badan']} kg",
+                        subtitle: "Lahir ${child['berat_lahir'] ?? '-'} kg",
+                        iconColor: Colors.pink,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        "Ringkasan Pertumbuhan",
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        "Berdasarkan pemeriksaan terakhir",
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                      const SizedBox(height: 20),
+                      Container(
+                        height: 180,
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: Colors.green.shade50,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: const Center(
+                          child: Icon(
+                            Icons.show_chart,
+                            size: 80,
+                            color: Colors.green,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: Colors.green.shade50,
+                          borderRadius: BorderRadius.circular(14),
                         ),
                         child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 8,
+                            const Icon(Icons.info_outline, color: Colors.green),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                child['tanggal_pemeriksaan'] == null
+                                    ? "Belum ada pemeriksaan untuk anak ini."
+                                    : "Pemeriksaan terakhir pada ${displayDate(child['tanggal_pemeriksaan'])}.",
+                                style: const TextStyle(height: 1.5),
                               ),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: const Text(
-                                "Berat",
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.green,
-                                ),
-                              ),
-                            ),
-
-                            const Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 12),
-                              child: Text("Tinggi"),
                             ),
                           ],
                         ),
                       ),
                     ],
                   ),
-
-                  const SizedBox(height: 20),
-
-                  // Dummy chart area
-                  Container(
-                    height: 220,
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: Colors.green.shade50,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: const Center(
-                      child: Icon(
-                        Icons.show_chart,
-                        size: 80,
-                        color: Colors.green,
-                      ),
-                    ),
+                ),
+                const SizedBox(height: 16),
+                InkWell(
+                  borderRadius: BorderRadius.circular(20),
+                  onTap: () => Navigator.pushReplacementNamed(
+                    context,
+                    AppRoutes.riwayat,
                   ),
-
-                  const SizedBox(height: 16),
-
-                  Container(
-                    padding: const EdgeInsets.all(14),
+                  child: Container(
+                    padding: const EdgeInsets.all(18),
                     decoration: BoxDecoration(
-                      color: Colors.green.shade50,
-                      borderRadius: BorderRadius.circular(14),
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
                     ),
                     child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
-                        Icon(Icons.info_outline, color: Colors.green),
-
-                        SizedBox(width: 10),
-
-                        Expanded(
-                          child: Text(
-                            "Pertumbuhan Arka berada di jalur ideal. "
-                            "Pertahankan asupan protein hewani dan jadwal imunisasi rutin.",
-                            style: TextStyle(height: 1.5),
+                      children: [
+                        Container(
+                          width: 45,
+                          height: 45,
+                          decoration: BoxDecoration(
+                            color: Colors.blue.shade50,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(
+                            Icons.history_edu,
+                            color: Colors.blue,
                           ),
                         ),
+                        const SizedBox(width: 14),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                "Lihat Riwayat Lengkap",
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                              SizedBox(height: 4),
+                              Text(
+                                "Semua pengukuran dari backend",
+                                style: TextStyle(color: Colors.grey),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Icon(Icons.chevron_right),
                       ],
                     ),
                   ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // ================= HISTORY BUTTON =================
-            InkWell(
-              borderRadius: BorderRadius.circular(20),
-              onTap: () {
-                Navigator.pushReplacementNamed(context, AppRoutes.riwayat);
-              },
-              child: Container(
-                padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
                 ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 45,
-                      height: 45,
-                      decoration: BoxDecoration(
-                        color: Colors.blue.shade50,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(Icons.history_edu, color: Colors.blue),
-                    ),
-
-                    const SizedBox(width: 14),
-
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
-                          Text(
-                            "Lihat Riwayat Lengkap",
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          SizedBox(height: 4),
-                          Text(
-                            "12 pengukuran terakhir",
-                            style: TextStyle(color: Colors.grey),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    const Icon(Icons.chevron_right),
-                  ],
-                ),
-              ),
+                const SizedBox(height: 80),
+              ],
             ),
-
-            const SizedBox(height: 80),
-          ],
-        ),
+          );
+        },
       ),
-
-      // ================= BOTTOM NAVIGATION =================
       bottomNavigationBar: const BottomNavbar(currentIndex: 3),
     );
   }
 
-  // ================= WIDGET CARD =================
   Widget statCard({
     required IconData icon,
     required String title,
@@ -370,29 +306,17 @@ class ProfilePage extends StatelessWidget {
             ),
             child: Icon(icon, color: iconColor),
           ),
-
           const SizedBox(height: 14),
-
           Text(title, style: const TextStyle(color: Colors.grey, fontSize: 13)),
-
           const SizedBox(height: 6),
-
           Text(
             value,
             style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
           ),
-
           const SizedBox(height: 6),
-
-          Row(
-            children: [
-              const Icon(Icons.trending_up, size: 16, color: Colors.green),
-              const SizedBox(width: 4),
-              Text(
-                subtitle,
-                style: const TextStyle(color: Colors.green, fontSize: 12),
-              ),
-            ],
+          Text(
+            subtitle,
+            style: const TextStyle(color: Colors.green, fontSize: 12),
           ),
         ],
       ),

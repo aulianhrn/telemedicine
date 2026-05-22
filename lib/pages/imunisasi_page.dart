@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:telemedicine/services/api_service.dart';
+import 'package:telemedicine/services/formatters.dart';
 import 'package:telemedicine/widgets/bottom_navbar.dart';
 
 class JadwalImunisasiPage extends StatelessWidget {
@@ -43,253 +45,167 @@ class JadwalImunisasiPage extends StatelessWidget {
       ),
 
       // ================= BODY =================
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ================= HEADER =================
-            const Text(
-              "Jadwal Imunisasi",
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
+      body: FutureBuilder<List<dynamic>>(
+        future: ApiService.imunisasi(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-            const SizedBox(height: 6),
-
-            const Text(
-              "Pantau jadwal tumbuh kembang si kecil secara berkala.",
-              style: TextStyle(color: Colors.grey),
-            ),
-
-            const SizedBox(height: 20),
-
-            // ================= CALENDAR =================
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
+          if (snapshot.hasError) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(
+                  snapshot.error.toString().replaceFirst('Exception: ', ''),
+                  textAlign: TextAlign.center,
+                ),
               ),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        "Oktober 2023",
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+            );
+          }
 
+          final items = snapshot.data ?? [];
+          final nextItems = items
+              .where((item) => item is Map && item['status'] == 'pending')
+              .cast<Map>()
+              .toList();
+          final next = nextItems.isNotEmpty ? nextItems.first : null;
+
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ================= HEADER =================
+                const Text(
+                  "Jadwal Imunisasi",
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                ),
+
+                const SizedBox(height: 6),
+
+                const Text(
+                  "Pantau jadwal tumbuh kembang si kecil secara berkala.",
+                  style: TextStyle(color: Colors.grey),
+                ),
+
+                const SizedBox(height: 20),
+
+                // ================= CALENDAR =================
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Column(
+                    children: [
                       Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          IconButton(
-                            onPressed: () {},
-                            icon: const Icon(Icons.chevron_left),
+                          const Text(
+                            "Oktober 2023",
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
 
-                          IconButton(
-                            onPressed: () {},
-                            icon: const Icon(Icons.chevron_right),
+                          Row(
+                            children: [
+                              IconButton(
+                                onPressed: () {},
+                                icon: const Icon(Icons.chevron_left),
+                              ),
+
+                              IconButton(
+                                onPressed: () {},
+                                icon: const Icon(Icons.chevron_right),
+                              ),
+                            ],
                           ),
                         ],
                       ),
-                    ],
-                  ),
 
-                  const SizedBox(height: 16),
+                      const SizedBox(height: 16),
 
-                  // Hari
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: const [
-                      Text("M"),
-                      Text("S"),
-                      Text("S"),
-                      Text("R"),
-                      Text("K"),
-                      Text("J"),
-                      Text("S"),
-                    ],
-                  ),
+                      // Hari
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: const [
+                          Text("M"),
+                          Text("S"),
+                          Text("S"),
+                          Text("R"),
+                          Text("K"),
+                          Text("J"),
+                          Text("S"),
+                        ],
+                      ),
 
-                  const SizedBox(height: 16),
+                      const SizedBox(height: 16),
 
-                  // Tanggal
-                  GridView.count(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    crossAxisCount: 7,
-                    childAspectRatio: 1,
-                    children: List.generate(10, (index) {
-                      List<String> dates = [
-                        "27",
-                        "28",
-                        "29",
-                        "30",
-                        "1",
-                        "2",
-                        "3",
-                        "4",
-                        "5",
-                        "6",
-                      ];
+                      // Tanggal
+                      GridView.count(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        crossAxisCount: 7,
+                        childAspectRatio: 1,
+                        children: List.generate(10, (index) {
+                          List<String> dates = [
+                            "27",
+                            "28",
+                            "29",
+                            "30",
+                            "1",
+                            "2",
+                            "3",
+                            "4",
+                            "5",
+                            "6",
+                          ];
 
-                      bool isSelected = dates[index] == "1";
+                          bool isSelected = dates[index] == "1";
 
-                      return Center(
-                        child: Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: isSelected
-                                ? Colors.green.shade100
-                                : Colors.transparent,
-                            shape: BoxShape.circle,
-                            border: isSelected
-                                ? Border.all(color: Colors.green, width: 2)
-                                : null,
-                          ),
-                          child: Center(
-                            child: Text(
-                              dates[index],
-                              style: TextStyle(
-                                fontWeight: isSelected
-                                    ? FontWeight.bold
-                                    : FontWeight.normal,
-                                color: isSelected ? Colors.green : Colors.black,
+                          return Center(
+                            child: Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? Colors.green.shade100
+                                    : Colors.transparent,
+                                shape: BoxShape.circle,
+                                border: isSelected
+                                    ? Border.all(color: Colors.green, width: 2)
+                                    : null,
+                              ),
+                              child: Center(
+                                child: Text(
+                                  dates[index],
+                                  style: TextStyle(
+                                    fontWeight: isSelected
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
+                                    color: isSelected
+                                        ? Colors.green
+                                        : Colors.black,
+                                  ),
+                                ),
                               ),
                             ),
-                          ),
-                        ),
-                      );
-                    }),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            // ================= REMINDER =================
-            const Text(
-              "PENGINGAT TERDEKAT",
-              style: TextStyle(
-                color: Colors.blue,
-                fontWeight: FontWeight.bold,
-                fontSize: 12,
-              ),
-            ),
-
-            const SizedBox(height: 10),
-
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: const Color(0xFF006E2F),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.green.shade300,
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                    child: const Text(
-                      "Mendatang",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  const Text(
-                    "Campak-Rubella",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  Row(
-                    children: const [
-                      Icon(
-                        Icons.calendar_today,
-                        color: Colors.white70,
-                        size: 18,
-                      ),
-
-                      SizedBox(width: 8),
-
-                      Text(
-                        "15 Oktober 2023",
-                        style: TextStyle(color: Colors.white70),
+                          );
+                        }),
                       ),
                     ],
                   ),
+                ),
 
-                  const SizedBox(height: 10),
+                const SizedBox(height: 24),
 
-                  Row(
-                    children: const [
-                      Icon(Icons.location_on, color: Colors.white70, size: 18),
-
-                      SizedBox(width: 8),
-
-                      Text(
-                        "Posyandu Melati 04",
-                        style: TextStyle(color: Colors.white70),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: const Color(0xFF006E2F),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                      ),
-                      onPressed: () {},
-                      child: const Text(
-                        "Lihat Detail Lokasi",
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            // ================= VAKSIN LIST =================
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: const [
-                Text(
-                  "RIWAYAT & DAFTAR VAKSIN",
+                // ================= REMINDER =================
+                const Text(
+                  "PENGINGAT TERDEKAT",
                   style: TextStyle(
                     color: Colors.blue,
                     fontWeight: FontWeight.bold,
@@ -297,42 +213,165 @@ class JadwalImunisasiPage extends StatelessWidget {
                   ),
                 ),
 
-                Text(
-                  "Lihat Semua",
-                  style: TextStyle(
-                    color: Colors.green,
-                    fontWeight: FontWeight.bold,
+                const SizedBox(height: 10),
+
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF006E2F),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.green.shade300,
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        child: const Text(
+                          "Mendatang",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      Text(
+                        next?['nama_vaksin']?.toString() ?? "Belum ada jadwal",
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.calendar_today,
+                            color: Colors.white70,
+                            size: 18,
+                          ),
+
+                          const SizedBox(width: 8),
+
+                          Text(
+                            displayDate(next?['tanggal_jadwal']),
+                            style: const TextStyle(color: Colors.white70),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 10),
+
+                      Row(
+                        children: const [
+                          Icon(
+                            Icons.location_on,
+                            color: Colors.white70,
+                            size: 18,
+                          ),
+
+                          SizedBox(width: 8),
+
+                          Text(
+                            "Posyandu Melati 04",
+                            style: TextStyle(color: Colors.white70),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: const Color(0xFF006E2F),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                          onPressed: () {},
+                          child: const Text(
+                            "Lihat Detail Lokasi",
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
+
+                const SizedBox(height: 24),
+
+                // ================= VAKSIN LIST =================
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: const [
+                    Text(
+                      "RIWAYAT & DAFTAR VAKSIN",
+                      style: TextStyle(
+                        color: Colors.blue,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+
+                    Text(
+                      "Lihat Semua",
+                      style: TextStyle(
+                        color: Colors.green,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 14),
+
+                if (items.isEmpty)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    child: const Text("Belum ada data imunisasi."),
+                  )
+                else
+                  ...items.map((item) {
+                    final data = Map<String, dynamic>.from(item as Map);
+                    final done = data['status'] == 'selesai';
+                    return vaksinItem(
+                      title: data['nama_vaksin']?.toString() ?? '-',
+                      subtitle: done
+                          ? "Diberikan pada ${displayDate(data['tanggal_imunisasi'])}"
+                          : "Jadwal: ${displayDate(data['tanggal_jadwal'])}",
+                      status: done ? "Selesai" : "Mendatang",
+                      done: done,
+                    );
+                  }),
+
+                const SizedBox(height: 90),
               ],
             ),
-
-            const SizedBox(height: 14),
-
-            vaksinItem(
-              title: "DPT-HB-Hib 3",
-              subtitle: "Diberikan pada 12 Sep 2023",
-              status: "Selesai",
-              done: true,
-            ),
-
-            vaksinItem(
-              title: "Polio 4",
-              subtitle: "Diberikan pada 12 Sep 2023",
-              status: "Selesai",
-              done: true,
-            ),
-
-            vaksinItem(
-              title: "PCV 2",
-              subtitle: "Jadwal: 20 Nov 2023",
-              status: "Mendatang",
-              done: false,
-            ),
-
-            const SizedBox(height: 90),
-          ],
-        ),
+          );
+        },
       ),
 
       // ================= BOTTOM NAVIGATION =================

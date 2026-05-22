@@ -3,6 +3,7 @@ import 'package:telemedicine/app_routes.dart';
 import 'package:telemedicine/pages/child_profile_page.dart';
 import 'package:telemedicine/pages/login_page.dart';
 import 'package:telemedicine/pages/main_navigation_page.dart';
+import 'package:telemedicine/pages/register_page.dart';
 
 void main() {
   runApp(const MyApp());
@@ -23,6 +24,7 @@ class MyApp extends StatelessWidget {
       initialRoute: AppRoutes.login,
       routes: {
         AppRoutes.login: (_) => const LoginPage(),
+        AppRoutes.register: (_) => const RegisterPage(),
         AppRoutes.home: (_) => const MainNavigationPage(),
         AppRoutes.imunisasi: (_) => const MainNavigationPage(initialIndex: 1),
         AppRoutes.riwayat: (_) => const MainNavigationPage(initialIndex: 2),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:telemedicine/app_routes.dart';
+import 'package:telemedicine/services/session_manager.dart';
 import 'package:telemedicine/widgets/bottom_navbar.dart';
 
 class ProfileSayaPage extends StatelessWidget {
@@ -14,6 +15,8 @@ class ProfileSayaPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final user = SessionManager.user;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FF),
 
@@ -89,16 +92,16 @@ class ProfileSayaPage extends StatelessWidget {
 
             const SizedBox(height: 16),
 
-            const Text(
-              "Bunda Sarah Wijaya",
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            Text(
+              user?['nama']?.toString() ?? "Pengguna",
+              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
             ),
 
             const SizedBox(height: 6),
 
-            const Text(
-              "sarah.wijaya@email.com",
-              style: TextStyle(color: Colors.grey, fontSize: 15),
+            Text(
+              user?['email']?.toString() ?? "-",
+              style: const TextStyle(color: Colors.grey, fontSize: 15),
             ),
 
             const SizedBox(height: 30),
@@ -129,23 +132,23 @@ class ProfileSayaPage extends StatelessWidget {
               },
             ),
 
-            const SizedBox(height: 12),
+            // const SizedBox(height: 12),
 
-            menuItem(
-              icon: Icons.settings,
-              title: "Pengaturan Akun",
-              color: Colors.grey,
-              onTap: () {},
-            ),
+            // menuItem(
+            //   icon: Icons.settings,
+            //   title: "Pengaturan Akun",
+            //   color: Colors.grey,
+            //   onTap: () {},
+            // ),
 
-            const SizedBox(height: 12),
+            // const SizedBox(height: 12),
 
-            menuItem(
-              icon: Icons.help_outline,
-              title: "Bantuan & Dukungan",
-              color: Colors.pink,
-              onTap: () {},
-            ),
+            // menuItem(
+            //   icon: Icons.help_outline,
+            //   title: "Bantuan & Dukungan",
+            //   color: Colors.pink,
+            //   onTap: () {},
+            // ),
 
             const SizedBox(height: 12),
 
@@ -161,6 +164,7 @@ class ProfileSayaPage extends StatelessWidget {
             // ================= LOGOUT =================
             InkWell(
               onTap: () {
+                SessionManager.clear();
                 Navigator.pushNamedAndRemoveUntil(
                   context,
                   AppRoutes.login,
@@ -193,12 +197,6 @@ class ProfileSayaPage extends StatelessWidget {
 
             const SizedBox(height: 20),
 
-            const Text(
-              "Versi 2.4.0 (Build 2024)",
-              style: TextStyle(color: Colors.grey, fontSize: 12),
-            ),
-
-            const SizedBox(height: 80),
           ],
         ),
       ),

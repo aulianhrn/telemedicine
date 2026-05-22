@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:telemedicine/app_routes.dart';
+import 'package:telemedicine/services/api_service.dart';
+import 'package:telemedicine/services/formatters.dart';
 import 'package:telemedicine/widgets/bottom_navbar.dart';
 
 class RiwayatPage extends StatelessWidget {
@@ -16,8 +18,6 @@ class RiwayatPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FF),
-
-      // ================= APP BAR =================
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -39,9 +39,9 @@ class RiwayatPage extends StatelessWidget {
             fontWeight: FontWeight.bold,
           ),
         ),
-        actions: [
+        actions: const [
           Padding(
-            padding: const EdgeInsets.only(right: 16),
+            padding: EdgeInsets.only(right: 16),
             child: CircleAvatar(
               radius: 18,
               backgroundImage: NetworkImage("https://i.pravatar.cc/150?img=47"),
@@ -49,161 +49,167 @@ class RiwayatPage extends StatelessWidget {
           ),
         ],
       ),
+      body: FutureBuilder<List<dynamic>>(
+        future: ApiService.pemeriksaan(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-      // ================= BODY =================
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            // ================= SUMMARY CARD =================
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
+          if (snapshot.hasError) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(
+                  snapshot.error.toString().replaceFirst('Exception: ', ''),
+                  textAlign: TextAlign.center,
+                ),
               ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 60,
-                    height: 60,
-                    decoration: BoxDecoration(
-                      color: Colors.green.shade100,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.child_care,
-                      color: Colors.green,
-                      size: 32,
-                    ),
+            );
+          }
+
+          final items = snapshot.data ?? [];
+          final first = items.isEmpty
+              ? null
+              : Map<String, dynamic>.from(items.first as Map);
+
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
                   ),
-
-                  const SizedBox(width: 16),
-
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
-                        Text(
-                          "Andi Pratama",
-                          style: TextStyle(
-                            fontSize: 20,
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 60,
+                        height: 60,
+                        decoration: BoxDecoration(
+                          color: Colors.green.shade100,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.child_care,
+                          color: Colors.green,
+                          size: 32,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              first?['nama_anak']?.toString() ??
+                                  "Belum ada data",
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              first == null
+                                  ? "-"
+                                  : "Pemeriksaan terakhir ${displayDate(first['tanggal_pemeriksaan'])}",
+                              style: const TextStyle(color: Colors.grey),
+                            ),
+                            const SizedBox(height: 2),
+                            const Text(
+                              "Terdaftar di Posyandu Melati",
+                              style: TextStyle(
+                                color: Colors.grey,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.green.shade100,
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        child: Text(
+                          "Status: ${first?['status_gizi'] ?? '-'}",
+                          style: const TextStyle(
+                            color: Colors.green,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-
-                        SizedBox(height: 4),
-
-                        Text(
-                          "Laki-laki • 18 Bulan",
-                          style: TextStyle(color: Colors.grey),
-                        ),
-
-                        SizedBox(height: 2),
-
-                        Text(
-                          "Terdaftar di Posyandu Melati",
-                          style: TextStyle(color: Colors.grey, fontSize: 13),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.green.shade100,
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                    child: const Text(
-                      "Status: Baik",
-                      style: TextStyle(
-                        color: Colors.green,
-                        fontWeight: FontWeight.bold,
                       ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+                if (items.isEmpty)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
                     ),
-                  ),
-                ],
-              ),
-            ),
+                    child: const Text("Belum ada riwayat pemeriksaan."),
+                  )
+                else
+                  ...items.map((item) {
+                    final data = Map<String, dynamic>.from(item as Map);
+                    final status =
+                        data['status_gizi']?.toString().toLowerCase() ?? '';
+                    final isGood =
+                        status.contains('baik') || status.contains('normal');
 
-            const SizedBox(height: 24),
-
-            // ================= TIMELINE =================
-            timelineItem(
-              date: "12 September 2023",
-              weight: "10.5 kg",
-              height: "82 cm",
-              head: "47 cm",
-              noteTitle: "Catatan Bidan Sarah",
-              note:
-                  "Pertumbuhan normal, teruskan ASI eksklusif dan mulai perbanyak protein hewani pada MPASI.",
-              isGood: true,
-            ),
-
-            timelineItem(
-              date: "10 Agustus 2023",
-              weight: "9.8 kg",
-              height: "79 cm",
-              head: "46 cm",
-              noteTitle: "Catatan Kader Rina",
-              note:
-                  "Kenaikan berat badan kurang optimal. Disarankan konsultasi ke dokter spesialis anak.",
-              isGood: false,
-            ),
-
-            timelineItem(
-              date: "15 Juli 2023",
-              weight: "9.5 kg",
-              height: "78 cm",
-              head: "46 cm",
-              noteTitle: "Catatan Bidan Sarah",
-              note:
-                  "Imunisasi DPT-HB-Hib 3 berhasil dilakukan. Kondisi anak sehat.",
-              isGood: true,
-            ),
-
-            const SizedBox(height: 20),
-
-            // ================= END TEXT =================
-            Column(
-              children: [
-                Container(
-                  width: 60,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade200,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.history, color: Colors.grey),
+                    return timelineItem(
+                      date: displayDate(data['tanggal_pemeriksaan']),
+                      weight: "${data['berat_badan'] ?? '-'} kg",
+                      height: "${data['tinggi_badan'] ?? '-'} cm",
+                      head: "${data['lingkar_kepala'] ?? '-'} cm",
+                      noteTitle: "Catatan ${data['nama_bidan'] ?? 'Bidan'}",
+                      note: data['catatan']?.toString() ?? '-',
+                      isGood: isGood,
+                    );
+                  }),
+                const SizedBox(height: 20),
+                Column(
+                  children: [
+                    Container(
+                      width: 60,
+                      height: 60,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade200,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.history, color: Colors.grey),
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      "Menampilkan semua riwayat pemeriksaan",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  ],
                 ),
-
-                const SizedBox(height: 12),
-
-                const Text(
-                  "Menampilkan semua riwayat dari 12 bulan terakhir",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.grey),
-                ),
+                const SizedBox(height: 90),
               ],
             ),
-
-            const SizedBox(height: 90),
-          ],
-        ),
+          );
+        },
       ),
-
-      // ================= BOTTOM NAVIGATION =================
       bottomNavigationBar: showBottomNavbar
           ? const BottomNavbar(currentIndex: 2)
           : null,
     );
   }
 
-  // ================= TIMELINE ITEM =================
   Widget timelineItem({
     required String date,
     required String weight,
@@ -218,14 +224,13 @@ class RiwayatPage extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Timeline Dot
           Column(
             children: [
               Container(
                 width: 40,
                 height: 40,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF006E2F),
+                decoration: const BoxDecoration(
+                  color: Color(0xFF006E2F),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
@@ -234,14 +239,10 @@ class RiwayatPage extends StatelessWidget {
                   size: 18,
                 ),
               ),
-
               Container(width: 2, height: 260, color: Colors.grey.shade300),
             ],
           ),
-
           const SizedBox(width: 16),
-
-          // Content
           Expanded(
             child: Container(
               padding: const EdgeInsets.all(18),
@@ -261,39 +262,32 @@ class RiwayatPage extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        date,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
+                      Expanded(
+                        child: Text(
+                          date,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
-
                       Icon(
                         isGood ? Icons.verified : Icons.warning,
                         color: isGood ? Colors.green : Colors.orange,
                       ),
                     ],
                   ),
-
                   const SizedBox(height: 16),
-
                   Row(
                     children: [
                       Expanded(child: measurementCard("Berat Badan", weight)),
-
                       const SizedBox(width: 10),
-
                       Expanded(child: measurementCard("Tinggi Badan", height)),
                     ],
                   ),
-
                   const SizedBox(height: 10),
-
                   measurementCard("Lingkar Kepala", head),
-
                   const SizedBox(height: 16),
-
                   Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
@@ -309,9 +303,7 @@ class RiwayatPage extends StatelessWidget {
                               : Icons.chat_bubble,
                           color: isGood ? Colors.blue : Colors.pink,
                         ),
-
                         const SizedBox(width: 10),
-
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -323,9 +315,7 @@ class RiwayatPage extends StatelessWidget {
                                   color: isGood ? Colors.blue : Colors.pink,
                                 ),
                               ),
-
                               const SizedBox(height: 6),
-
                               Text(note, style: const TextStyle(height: 1.5)),
                             ],
                           ),
@@ -342,7 +332,6 @@ class RiwayatPage extends StatelessWidget {
     );
   }
 
-  // ================= MEASUREMENT CARD =================
   Widget measurementCard(String title, String value) {
     return Container(
       padding: const EdgeInsets.all(14),
@@ -354,9 +343,7 @@ class RiwayatPage extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(title, style: const TextStyle(color: Colors.grey, fontSize: 12)),
-
           const SizedBox(height: 6),
-
           Text(
             value,
             style: const TextStyle(
