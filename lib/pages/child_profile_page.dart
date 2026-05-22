@@ -1,12 +1,32 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:telemedicine/app_routes.dart';
 import 'package:telemedicine/services/api_service.dart';
 import 'package:telemedicine/services/formatters.dart';
 import 'package:telemedicine/widgets/bottom_navbar.dart';
 import 'package:telemedicine/widgets/profile_avatar.dart';
 
-class ProfilePage extends StatelessWidget {
+class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
+
+  @override
+  State<ProfilePage> createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends State<ProfilePage> {
+  final ImagePicker _imagePicker = ImagePicker();
+  late Future<List<dynamic>> _childrenFuture;
+  Uint8List? _pickedPhotoBytes;
+  bool _isUploadingPhoto = false;
+  int _photoVersion = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _childrenFuture = ApiService.anak();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -35,7 +55,7 @@ class ProfilePage extends StatelessWidget {
         ],
       ),
       body: FutureBuilder<List<dynamic>>(
-        future: ApiService.anak(),
+        future: _childrenFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -72,6 +92,77 @@ class ProfilePage extends StatelessWidget {
                   ),
                   child: Column(
                     children: [
+                      GestureDetector(
+                        onTap: _isUploadingPhoto
+                            ? null
+                            : () => _openPhotoOptions(child),
+                        child: Stack(
+                          children: [
+                            Container(
+                              width: 120,
+                              height: 120,
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 4,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.08),
+                                    blurRadius: 10,
+                                  ),
+                                ],
+                              ),
+                              child: _childAvatar(child),
+                            ),
+                            Positioned.fill(
+                              child: AnimatedOpacity(
+                                duration: const Duration(milliseconds: 180),
+                                opacity: _isUploadingPhoto ? 1 : 0,
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withValues(alpha: 0.35),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Center(
+                                    child: SizedBox(
+                                      width: 24,
+                                      height: 24,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            Positioned(
+                              bottom: 0,
+                              right: 0,
+                              child: Container(
+                                padding: const EdgeInsets.all(7),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF006E2F),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: Colors.white,
+                                    width: 2,
+                                  ),
+                                ),
+                                child: const Icon(
+                                  Icons.edit,
+                                  color: Colors.white,
+                                  size: 18,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
                       Text(
                         child['nama']?.toString() ?? "-",
                         style: const TextStyle(
@@ -261,6 +352,229 @@ class ProfilePage extends StatelessWidget {
         },
       ),
       bottomNavigationBar: const BottomNavbar(currentIndex: 3),
+    );
+  }
+
+  Future<void> _openPhotoOptions(Map<String, dynamic> child) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 42,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                const Text(
+                  "Foto Anak",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 14),
+                _photoOption(
+                  icon: Icons.photo_library_outlined,
+                  title: "Pilih dari Galeri",
+                  subtitle: "Gunakan foto yang sudah ada",
+                  onTap: () => _pickPhoto(child, ImageSource.gallery),
+                ),
+                const SizedBox(height: 10),
+                _photoOption(
+                  icon: Icons.photo_camera_outlined,
+                  title: "Ambil Foto",
+                  subtitle: "Buka kamera perangkat",
+                  onTap: () => _pickPhoto(child, ImageSource.camera),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _pickPhoto(
+    Map<String, dynamic> child,
+    ImageSource source,
+  ) async {
+    Navigator.pop(context);
+
+    final childId = _childId(child);
+    if (childId == null) {
+      _showMessage("ID anak tidak ditemukan");
+      return;
+    }
+
+    setState(() => _isUploadingPhoto = true);
+
+    try {
+      final pickedImage = await _imagePicker.pickImage(
+        source: source,
+        imageQuality: 80,
+        maxWidth: 900,
+        maxHeight: 900,
+      );
+
+      if (pickedImage == null) {
+        return;
+      }
+
+      final photoBytes = await pickedImage.readAsBytes();
+      setState(() => _pickedPhotoBytes = photoBytes);
+
+      await ApiService.uploadChildAvatar(
+        childId: childId,
+        photoBytes: photoBytes,
+        fileName: pickedImage.name.isEmpty
+            ? 'avatar-anak.jpg'
+            : pickedImage.name,
+        replaceExisting: _childPhotoUrl(child) != null,
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _pickedPhotoBytes = null;
+        _photoVersion++;
+        _childrenFuture = ApiService.anak();
+      });
+      _showMessage("Foto anak berhasil diperbarui");
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() => _pickedPhotoBytes = null);
+      _showMessage(
+        error.toString().replaceFirst('Exception: ', '').isEmpty
+            ? "Gagal mengunggah foto anak"
+            : error.toString().replaceFirst('Exception: ', ''),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isUploadingPhoto = false);
+      }
+    }
+  }
+
+  Widget _childAvatar(Map<String, dynamic> child) {
+    final photoBytes = _pickedPhotoBytes;
+    final photoUrl = _childPhotoUrl(child);
+
+    if (photoBytes != null) {
+      return CircleAvatar(
+        backgroundColor: const Color(0xFFE5EEFF),
+        backgroundImage: MemoryImage(photoBytes),
+      );
+    }
+
+    if (photoUrl != null) {
+      return CircleAvatar(
+        backgroundColor: const Color(0xFFE5EEFF),
+        backgroundImage: NetworkImage(_versionedUrl(photoUrl)),
+      );
+    }
+
+    return const CircleAvatar(
+      backgroundColor: Color(0xFFE5EEFF),
+      child: Icon(Icons.child_care, color: Color(0xFF006E2F), size: 52),
+    );
+  }
+
+  Widget _photoOption({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+        child: Row(
+          children: [
+            Container(
+              width: 46,
+              height: 46,
+              decoration: BoxDecoration(
+                color: const Color(0xFF006E2F).withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: const Color(0xFF006E2F)),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      color: Colors.black87,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(color: Colors.grey, fontSize: 13),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right, color: Colors.grey.shade400),
+          ],
+        ),
+      ),
+    );
+  }
+
+  int? _childId(Map<String, dynamic> child) {
+    final id = child['id'] ?? child['anak_id'];
+    if (id is int) {
+      return id;
+    }
+
+    return int.tryParse(id?.toString() ?? '');
+  }
+
+  String? _childPhotoUrl(Map<String, dynamic> child) {
+    final rawUrl = child['ava_pict_url'] ?? child['ava_pict'];
+    final value = rawUrl?.toString().trim();
+    return value == null || value.isEmpty ? null : value;
+  }
+
+  String _versionedUrl(String url) {
+    final uri = Uri.tryParse(url);
+    if (uri == null) {
+      return url;
+    }
+
+    return uri
+        .replace(
+          queryParameters: {...uri.queryParameters, 'v': '$_photoVersion'},
+        )
+        .toString();
+  }
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
     );
   }
 

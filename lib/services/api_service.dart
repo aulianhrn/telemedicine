@@ -51,6 +51,12 @@ class ApiService {
       ),
     );
 
+    try {
+      await me();
+    } catch (_) {
+      // Keep login usable even if the profile refresh endpoint is unavailable.
+    }
+
     return data;
   }
 
@@ -140,7 +146,48 @@ class ApiService {
 
   static Future<Map<String, dynamic>> dashboard() => _getMap('/dashboard');
 
-  static Future<List<dynamic>> anak() => _getList('/anak');
+  static Future<List<dynamic>> anak() async {
+    final items = await _getList('/anak');
+    return items.map((item) {
+      if (item is Map) {
+        return _normalizeChildAvatar(Map<String, dynamic>.from(item));
+      }
+
+      return item;
+    }).toList();
+  }
+
+  static Future<Map<String, dynamic>> uploadChildAvatar({
+    required int childId,
+    required Uint8List photoBytes,
+    required String fileName,
+    required bool replaceExisting,
+  }) async {
+    final request = http.MultipartRequest(
+      replaceExisting ? 'PATCH' : 'POST',
+      Uri.parse('$baseUrl/anak/$childId/avatar'),
+    );
+
+    request.headers.addAll(_authHeaders);
+    request.files.add(
+      http.MultipartFile.fromBytes(
+        'ava_pict',
+        photoBytes,
+        filename: fileName,
+        contentType: _avatarMediaType(fileName),
+      ),
+    );
+
+    final streamedResponse = await request.send();
+    final response = await http.Response.fromStream(streamedResponse);
+    final data = _decodeMap(response);
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception(data['message'] ?? 'Upload foto anak gagal');
+    }
+
+    return data;
+  }
 
   static Future<List<dynamic>> imunisasi({int? anakId}) {
     final query = anakId == null ? '' : '?anak_id=$anakId';
@@ -225,6 +272,19 @@ class ApiService {
     return {...user, 'ava_pict_url': avatarUrl};
   }
 
+  static Map<String, dynamic> _normalizeChildAvatar(
+    Map<String, dynamic> child,
+  ) {
+    final avatarUrl = child['ava_pict_url'] != null
+        ? _resolvePublicUrl(child['ava_pict_url'])
+        : _resolveChildFileUrl(child['ava_pict']);
+    if (avatarUrl == null) {
+      return child;
+    }
+
+    return {...child, 'ava_pict_url': avatarUrl};
+  }
+
   static String? _resolvePublicUrl(Object? rawUrl) {
     final url = rawUrl?.toString().trim();
     if (url == null || url.isEmpty) {
@@ -258,6 +318,24 @@ class ApiService {
     }
 
     return _resolvePublicUrl('/uploads/profile/$value');
+  }
+
+  static String? _resolveChildFileUrl(Object? fileName) {
+    final value = fileName?.toString().trim();
+    if (value == null || value.isEmpty) {
+      return null;
+    }
+
+    final uri = Uri.tryParse(value);
+    if (uri != null && uri.hasScheme) {
+      return value;
+    }
+
+    if (value.startsWith('/')) {
+      return _resolvePublicUrl(value);
+    }
+
+    return _resolvePublicUrl('/uploads/anak/$value');
   }
 
   static MediaType _avatarMediaType(String fileName) {

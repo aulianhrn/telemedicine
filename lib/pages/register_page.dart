@@ -114,7 +114,8 @@ class _RegisterPageState extends State<RegisterPage> {
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 440),
               child: Padding(
@@ -145,7 +146,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       ),
                       const SizedBox(height: 22),
                       Container(
-                        height: 118,
+                        constraints: const BoxConstraints(minHeight: 118),
                         decoration: BoxDecoration(
                           color: primaryColor.withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(18),
@@ -177,7 +178,7 @@ class _RegisterPageState extends State<RegisterPage> {
                                   ),
                                   SizedBox(height: 6),
                                   Text(
-                                    "Daftar sebagai ibu untuk memantau data anak.",
+                                    "Daftar sebagai ibu untuk\nmemantau data anak.",
                                     style: TextStyle(
                                       color: Color(0xFF6D7B6C),
                                       height: 1.4,

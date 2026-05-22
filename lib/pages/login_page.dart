@@ -92,8 +92,8 @@ class _LoginPageState extends State<LoginPage> {
                     const SizedBox(height: 22),
                     ClipRRect(
                       borderRadius: BorderRadius.circular(16),
-                      child: Image.network(
-                        'https://lh3.googleusercontent.com/aida-public/AB6AXuAc6Ru8UiETkoFRhM29_i1N6nzm8SRGZxB4rkKtMoH_86LICQ-my8RakxBawci4RB9zzaFes5cw9SAw7HdqcxYWG2EOqi6KZduUti505WBd23eOGUtU-z8SL1hxn4AOjYQeytTJo4fbA0fZ2ces9-Ht5FcO6BoIfhSbVEhMyTwvf_mMjni1IQtUzZBQ-AY939OeHxUG9caRKql_tEGDItxJFOmoE_YCrkGSO0v4IaAIqhxQTls31oISJbTNL70tpK6cD5D_xsypkHc',
+                      child: Image.asset(
+                        'lib/assets/images/logo-posyandu.png',
                         height: 180,
                         width: double.infinity,
                         fit: BoxFit.contain,
@@ -126,7 +126,7 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     const SizedBox(height: 8),
                     const Text(
-                      "Masuk untuk memantau kesehatan keluarga.",
+                      "Masuk untuk memantau kesehatan anak.",
                       textAlign: TextAlign.center,
                       style: TextStyle(fontSize: 16, color: Color(0xFF6D7B6C)),
                     ),
@@ -155,19 +155,19 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton(
-                        onPressed: () {},
-                        child: Text(
-                          "Lupa kata sandi?",
-                          style: TextStyle(
-                            color: primaryColor,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
+                    // Align(
+                    //   alignment: Alignment.centerRight,
+                    //   child: TextButton(
+                    //     onPressed: () {},
+                    //     child: Text(
+                    //       "Lupa kata sandi?",
+                    //       style: TextStyle(
+                    //         color: primaryColor,
+                    //         fontWeight: FontWeight.w600,
+                    //       ),
+                    //     ),
+                    //   ),
+                    // ),
                     const SizedBox(height: 8),
                     SizedBox(
                       height: 58,
