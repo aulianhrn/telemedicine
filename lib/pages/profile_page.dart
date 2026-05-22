@@ -1,7 +1,10 @@
-import 'package:flutter/material.dart';iimport 'package:image_picker/image_picker.dart';
+import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:telemedicine/app_routes.dart';
+import 'package:telemedicine/services/api_service.dart';
 import 'package:telemedicine/services/session_manager.dart';
 import 'package:telemedicine/widgets/bottom_navbar.dart';
+import 'package:telemedicine/widgets/profile_avatar.dart';
 
 class ProfileSayaPage extends StatefulWidget {
   final bool showBottomNavbar;
@@ -29,8 +32,6 @@ class _ProfileSayaPageState extends State<ProfileSayaPage> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) {
-        final hasPhoto = SessionManager.profilePhotoBytes != null;
-
         return SafeArea(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
@@ -64,16 +65,6 @@ class _ProfileSayaPageState extends State<ProfileSayaPage> {
                   subtitle: "Buka kamera perangkat",
                   onTap: () => _pickPhoto(ImageSource.camera),
                 ),
-                if (hasPhoto) ...[
-                  const SizedBox(height: 10),
-                  _photoOption(
-                    icon: Icons.delete_outline,
-                    title: "Hapus Foto",
-                    subtitle: "Kembali ke foto bawaan",
-                    color: Colors.red,
-                    onTap: _removePhoto,
-                  ),
-                ],
               ],
             ),
           ),
@@ -88,6 +79,7 @@ class _ProfileSayaPageState extends State<ProfileSayaPage> {
     setState(() => _isPickingPhoto = true);
 
     try {
+      final replaceExisting = SessionManager.hasProfilePhoto;
       final pickedImage = await _imagePicker.pickImage(
         source: source,
         imageQuality: 80,
@@ -101,6 +93,11 @@ class _ProfileSayaPageState extends State<ProfileSayaPage> {
 
       final photoBytes = await pickedImage.readAsBytes();
       SessionManager.saveProfilePhoto(photoBytes);
+      await ApiService.uploadProfileAvatar(
+        photoBytes: photoBytes,
+        fileName: pickedImage.name.isEmpty ? 'avatar.jpg' : pickedImage.name,
+        replaceExisting: replaceExisting,
+      );
 
       if (!mounted) {
         return;
@@ -113,19 +110,17 @@ class _ProfileSayaPageState extends State<ProfileSayaPage> {
         return;
       }
 
-      _showMessage("Gagal memilih foto profil");
+      SessionManager.clearProfilePhoto();
+      _showMessage(
+        error.toString().replaceFirst('Exception: ', '').isEmpty
+            ? "Gagal mengunggah foto profil"
+            : error.toString().replaceFirst('Exception: ', ''),
+      );
     } finally {
       if (mounted) {
         setState(() => _isPickingPhoto = false);
       }
     }
-  }
-
-  void _removePhoto() {
-    Navigator.pop(context);
-    SessionManager.clearProfilePhoto();
-    setState(() {});
-    _showMessage("Foto profil dihapus");
   }
 
   void _showMessage(String message) {
@@ -180,7 +175,7 @@ class _ProfileSayaPageState extends State<ProfileSayaPage> {
                         ),
                       ],
                     ),
-                    child: _profileAvatar(),
+                    child: const ProfileAvatar(radius: 56),
                   ),
                   Positioned.fill(
                     child: AnimatedOpacity(
@@ -234,35 +229,52 @@ class _ProfileSayaPageState extends State<ProfileSayaPage> {
               user?['email']?.toString() ?? "-",
               style: const TextStyle(color: Colors.grey, fontSize: 15),
             ),
-            const SizedBox(height: 30),
-            menuItem(
-              icon: Icons.child_care,
-              title: "Data Anak",
-              color: Colors.blue,
-              onTap: () {
-                Navigator.pushNamed(context, AppRoutes.childProfile);
-              },
-            ),
-            const SizedBox(height: 12),
-            menuItem(
-              icon: Icons.history_edu,
-              title: "Riwayat Pengukuran",
-              color: Colors.green,
-              onTap: () {
-                if (widget.onTabSelected != null) {
-                  widget.onTabSelected!(2);
-                  return;
-                }
+            const SizedBox(height: 28),
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(18),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.03),
+                    blurRadius: 10,
+                  ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  menuItem(
+                    icon: Icons.child_care,
+                    title: "Data Anak",
+                    color: Colors.blue,
+                    onTap: () {
+                      Navigator.pushNamed(context, AppRoutes.childProfile);
+                    },
+                  ),
+                  Divider(
+                    height: 1,
+                    thickness: 1,
+                    indent: 76,
+                    color: Colors.grey.shade100,
+                  ),
+                  menuItem(
+                    icon: Icons.history_edu,
+                    title: "Riwayat Pengukuran",
+                    color: Colors.green,
+                    onTap: () {
+                      if (widget.onTabSelected != null) {
+                        widget.onTabSelected!(2);
+                        return;
+                      }
 
-                Navigator.pushReplacementNamed(context, AppRoutes.riwayat);
-              },
-            ),
-            const SizedBox(height: 12),
-            menuItem(
-              icon: Icons.info_outline,
-              title: "Tentang Aplikasi",
-              color: Colors.orange,
-              onTap: () {},
+                      Navigator.pushReplacementNamed(
+                        context,
+                        AppRoutes.riwayat,
+                      );
+                    },
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 30),
             InkWell(
@@ -302,19 +314,6 @@ class _ProfileSayaPageState extends State<ProfileSayaPage> {
       bottomNavigationBar: widget.showBottomNavbar
           ? const BottomNavbar(currentIndex: 3)
           : null,
-    );
-  }
-
-  Widget _profileAvatar() {
-    final photoBytes = SessionManager.profilePhotoBytes;
-
-    if (photoBytes != null) {
-      return CircleAvatar(backgroundImage: MemoryImage(photoBytes));
-    }
-
-    return const CircleAvatar(
-      backgroundColor: Color(0xFFE5EEFF),
-      backgroundImage: NetworkImage("https://i.pravatar.cc/300?img=32"),
     );
   }
 
@@ -378,18 +377,8 @@ class _ProfileSayaPageState extends State<ProfileSayaPage> {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(18),
-      child: Container(
+      child: Padding(
         padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(18),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
-              blurRadius: 10,
-            ),
-          ],
-        ),
         child: Row(
           children: [
             Container(
@@ -411,28 +400,6 @@ class _ProfileSayaPageState extends State<ProfileSayaPage> {
                 ),
               ),
             ),
-
-            Expanded(
-              child: Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-
-
-            Expanded(
-              child: Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-
             const Icon(Icons.chevron_right, color: Colors.grey),
           ],
         ),

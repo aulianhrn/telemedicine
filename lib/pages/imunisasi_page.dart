@@ -2,11 +2,28 @@ import 'package:flutter/material.dart';
 import 'package:telemedicine/services/api_service.dart';
 import 'package:telemedicine/services/formatters.dart';
 import 'package:telemedicine/widgets/bottom_navbar.dart';
+import 'package:telemedicine/widgets/profile_avatar.dart';
 
-class JadwalImunisasiPage extends StatelessWidget {
+class JadwalImunisasiPage extends StatefulWidget {
   final bool showBottomNavbar;
 
   const JadwalImunisasiPage({super.key, this.showBottomNavbar = true});
+
+  @override
+  State<JadwalImunisasiPage> createState() => _JadwalImunisasiPageState();
+}
+
+class _JadwalImunisasiPageState extends State<JadwalImunisasiPage> {
+  late final Future<List<dynamic>> _imunisasiFuture;
+  late DateTime _visibleMonth;
+
+  @override
+  void initState() {
+    super.initState();
+    _imunisasiFuture = ApiService.imunisasi();
+    final now = DateTime.now();
+    _visibleMonth = DateTime(now.year, now.month);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -20,10 +37,7 @@ class JadwalImunisasiPage extends StatelessWidget {
         titleSpacing: 16,
         title: Row(
           children: [
-            const CircleAvatar(
-              radius: 20,
-              backgroundImage: NetworkImage("https://i.pravatar.cc/300?img=32"),
-            ),
+            const ProfileAvatar(radius: 20),
 
             const SizedBox(width: 12),
 
@@ -46,7 +60,7 @@ class JadwalImunisasiPage extends StatelessWidget {
 
       // ================= BODY =================
       body: FutureBuilder<List<dynamic>>(
-        future: ApiService.imunisasi(),
+        future: _imunisasiFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -92,114 +106,7 @@ class JadwalImunisasiPage extends StatelessWidget {
                 const SizedBox(height: 20),
 
                 // ================= CALENDAR =================
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Column(
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text(
-                            "Oktober 2023",
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-
-                          Row(
-                            children: [
-                              IconButton(
-                                onPressed: () {},
-                                icon: const Icon(Icons.chevron_left),
-                              ),
-
-                              IconButton(
-                                onPressed: () {},
-                                icon: const Icon(Icons.chevron_right),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 16),
-
-                      // Hari
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: const [
-                          Text("M"),
-                          Text("S"),
-                          Text("S"),
-                          Text("R"),
-                          Text("K"),
-                          Text("J"),
-                          Text("S"),
-                        ],
-                      ),
-
-                      const SizedBox(height: 16),
-
-                      // Tanggal
-                      GridView.count(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        crossAxisCount: 7,
-                        childAspectRatio: 1,
-                        children: List.generate(10, (index) {
-                          List<String> dates = [
-                            "27",
-                            "28",
-                            "29",
-                            "30",
-                            "1",
-                            "2",
-                            "3",
-                            "4",
-                            "5",
-                            "6",
-                          ];
-
-                          bool isSelected = dates[index] == "1";
-
-                          return Center(
-                            child: Container(
-                              width: 40,
-                              height: 40,
-                              decoration: BoxDecoration(
-                                color: isSelected
-                                    ? Colors.green.shade100
-                                    : Colors.transparent,
-                                shape: BoxShape.circle,
-                                border: isSelected
-                                    ? Border.all(color: Colors.green, width: 2)
-                                    : null,
-                              ),
-                              child: Center(
-                                child: Text(
-                                  dates[index],
-                                  style: TextStyle(
-                                    fontWeight: isSelected
-                                        ? FontWeight.bold
-                                        : FontWeight.normal,
-                                    color: isSelected
-                                        ? Colors.green
-                                        : Colors.black,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          );
-                        }),
-                      ),
-                    ],
-                  ),
-                ),
+                _calendarCard(items: items, next: next),
 
                 const SizedBox(height: 24),
 
@@ -375,10 +282,237 @@ class JadwalImunisasiPage extends StatelessWidget {
       ),
 
       // ================= BOTTOM NAVIGATION =================
-      bottomNavigationBar: showBottomNavbar
+      bottomNavigationBar: widget.showBottomNavbar
           ? const BottomNavbar(currentIndex: 1)
           : null,
     );
+  }
+
+  Widget _calendarCard({required List<dynamic> items, required Map? next}) {
+    final firstDay = DateTime(_visibleMonth.year, _visibleMonth.month);
+    final startDate = firstDay.subtract(Duration(days: firstDay.weekday - 1));
+    final days = List.generate(
+      42,
+      (index) => startDate.add(Duration(days: index)),
+    );
+    final markedDates = _markedDates(items);
+    final selectedDate = _parseDate(next?['tanggal_jadwal']);
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE8EEF4)),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  _monthTitle(_visibleMonth),
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF0B1C30),
+                  ),
+                ),
+              ),
+              _monthButton(
+                icon: Icons.chevron_left,
+                onPressed: () => _changeMonth(-1),
+              ),
+              const SizedBox(width: 6),
+              _monthButton(
+                icon: Icons.chevron_right,
+                onPressed: () => _changeMonth(1),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          Row(
+            children: const [
+              _WeekdayLabel("Sen"),
+              _WeekdayLabel("Sel"),
+              _WeekdayLabel("Rab"),
+              _WeekdayLabel("Kam"),
+              _WeekdayLabel("Jum"),
+              _WeekdayLabel("Sab"),
+              _WeekdayLabel("Min"),
+            ],
+          ),
+          const SizedBox(height: 10),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: days.length,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 7,
+              mainAxisSpacing: 6,
+              crossAxisSpacing: 6,
+              childAspectRatio: 1,
+            ),
+            itemBuilder: (context, index) {
+              final day = days[index];
+              return _calendarDay(
+                day: day,
+                currentMonth: day.month == _visibleMonth.month,
+                selected: _isSameDate(day, selectedDate),
+                today: _isSameDate(day, DateTime.now()),
+                marked: markedDates[_dateKey(day)],
+              );
+            },
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: const [
+              _LegendDot(color: Color(0xFF006E2F), label: "Jadwal terdekat"),
+              SizedBox(width: 16),
+              _LegendDot(color: Colors.blue, label: "Ada imunisasi"),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _monthButton({
+    required IconData icon,
+    required VoidCallback onPressed,
+  }) {
+    return SizedBox(
+      width: 36,
+      height: 36,
+      child: IconButton(
+        onPressed: onPressed,
+        icon: Icon(icon, size: 22),
+        padding: EdgeInsets.zero,
+        style: IconButton.styleFrom(
+          backgroundColor: const Color(0xFFF1F5FF),
+          foregroundColor: const Color(0xFF006E2F),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _calendarDay({
+    required DateTime day,
+    required bool currentMonth,
+    required bool selected,
+    required bool today,
+    required String? marked,
+  }) {
+    final hasMark = marked != null;
+    final textColor = selected
+        ? Colors.white
+        : currentMonth
+        ? const Color(0xFF0B1C30)
+        : Colors.grey.shade400;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: selected ? const Color(0xFF006E2F) : Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+        border: today && !selected
+            ? Border.all(color: const Color(0xFF006E2F), width: 1.5)
+            : null,
+      ),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Text(
+            '${day.day}',
+            style: TextStyle(
+              color: textColor,
+              fontWeight: selected || today ? FontWeight.bold : FontWeight.w500,
+            ),
+          ),
+          if (hasMark)
+            Positioned(
+              bottom: 7,
+              child: Container(
+                width: 5,
+                height: 5,
+                decoration: BoxDecoration(
+                  color: selected ? Colors.white : Colors.blue,
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  void _changeMonth(int offset) {
+    setState(() {
+      _visibleMonth = DateTime(
+        _visibleMonth.year,
+        _visibleMonth.month + offset,
+      );
+    });
+  }
+
+  Map<String, String> _markedDates(List<dynamic> items) {
+    final result = <String, String>{};
+    for (final item in items) {
+      if (item is! Map) {
+        continue;
+      }
+
+      final date = _parseDate(
+        item['tanggal_jadwal'] ?? item['tanggal_imunisasi'],
+      );
+      if (date != null) {
+        result[_dateKey(date)] = item['status']?.toString() ?? 'imunisasi';
+      }
+    }
+    return result;
+  }
+
+  DateTime? _parseDate(dynamic value) {
+    if (value == null) {
+      return null;
+    }
+
+    final parsed = DateTime.tryParse(value.toString());
+    return parsed == null
+        ? null
+        : DateTime(parsed.year, parsed.month, parsed.day);
+  }
+
+  bool _isSameDate(DateTime date, DateTime? other) {
+    return other != null &&
+        date.year == other.year &&
+        date.month == other.month &&
+        date.day == other.day;
+  }
+
+  String _dateKey(DateTime date) {
+    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+  }
+
+  String _monthTitle(DateTime date) {
+    const months = [
+      'Januari',
+      'Februari',
+      'Maret',
+      'April',
+      'Mei',
+      'Juni',
+      'Juli',
+      'Agustus',
+      'September',
+      'Oktober',
+      'November',
+      'Desember',
+    ];
+
+    return '${months[date.month - 1]} ${date.year}';
   }
 
   // ================= VAKSIN ITEM =================
@@ -447,6 +581,54 @@ class JadwalImunisasiPage extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _WeekdayLabel extends StatelessWidget {
+  final String label;
+
+  const _WeekdayLabel(this.label);
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Center(
+        child: Text(
+          label,
+          style: const TextStyle(
+            color: Color(0xFF6D7B6C),
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LegendDot extends StatelessWidget {
+  final Color color;
+  final String label;
+
+  const _LegendDot({required this.color, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: const TextStyle(color: Color(0xFF6D7B6C), fontSize: 12),
+        ),
+      ],
     );
   }
 }

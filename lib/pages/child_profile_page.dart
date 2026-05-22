@@ -3,6 +3,7 @@ import 'package:telemedicine/app_routes.dart';
 import 'package:telemedicine/services/api_service.dart';
 import 'package:telemedicine/services/formatters.dart';
 import 'package:telemedicine/widgets/bottom_navbar.dart';
+import 'package:telemedicine/widgets/profile_avatar.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -29,10 +30,7 @@ class ProfilePage extends StatelessWidget {
         actions: const [
           Padding(
             padding: EdgeInsets.only(right: 16),
-            child: CircleAvatar(
-              radius: 20,
-              backgroundImage: NetworkImage("https://i.pravatar.cc/150?img=47"),
-            ),
+            child: ProfileAvatar(radius: 20),
           ),
         ],
       ),
@@ -74,21 +72,6 @@ class ProfilePage extends StatelessWidget {
                   ),
                   child: Column(
                     children: [
-                      Container(
-                        width: 120,
-                        height: 120,
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.green, width: 4),
-                        ),
-                        child: const CircleAvatar(
-                          backgroundImage: NetworkImage(
-                            "https://i.pravatar.cc/300?img=12",
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
                       Text(
                         child['nama']?.toString() ?? "-",
                         style: const TextStyle(

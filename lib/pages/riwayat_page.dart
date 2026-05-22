@@ -3,6 +3,7 @@ import 'package:telemedicine/app_routes.dart';
 import 'package:telemedicine/services/api_service.dart';
 import 'package:telemedicine/services/formatters.dart';
 import 'package:telemedicine/widgets/bottom_navbar.dart';
+import 'package:telemedicine/widgets/profile_avatar.dart';
 
 class RiwayatPage extends StatelessWidget {
   final bool showBottomNavbar;
@@ -42,10 +43,7 @@ class RiwayatPage extends StatelessWidget {
         actions: const [
           Padding(
             padding: EdgeInsets.only(right: 16),
-            child: CircleAvatar(
-              radius: 18,
-              backgroundImage: NetworkImage("https://i.pravatar.cc/150?img=47"),
-            ),
+            child: ProfileAvatar(radius: 18),
           ),
         ],
       ),
@@ -84,6 +82,7 @@ class RiwayatPage extends StatelessWidget {
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Container(
                         width: 60,
@@ -111,7 +110,28 @@ class RiwayatPage extends StatelessWidget {
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                            const SizedBox(height: 4),
+                            const SizedBox(height: 8),
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 6,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.green.shade100,
+                                  borderRadius: BorderRadius.circular(30),
+                                ),
+                                child: Text(
+                                  "Status: ${first?['status_gizi'] ?? '-'}",
+                                  style: const TextStyle(
+                                    color: Colors.green,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
                             Text(
                               first == null
                                   ? "-"
@@ -127,23 +147,6 @@ class RiwayatPage extends StatelessWidget {
                               ),
                             ),
                           ],
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.green.shade100,
-                          borderRadius: BorderRadius.circular(30),
-                        ),
-                        child: Text(
-                          "Status: ${first?['status_gizi'] ?? '-'}",
-                          style: const TextStyle(
-                            color: Colors.green,
-                            fontWeight: FontWeight.bold,
-                          ),
                         ),
                       ),
                     ],

@@ -4,6 +4,7 @@ import 'package:telemedicine/services/api_service.dart';
 import 'package:telemedicine/services/formatters.dart';
 import 'package:telemedicine/services/session_manager.dart';
 import 'package:telemedicine/widgets/bottom_navbar.dart';
+import 'package:telemedicine/widgets/profile_avatar.dart';
 
 class HomePage extends StatefulWidget {
   final bool showBottomNavbar;
@@ -252,12 +253,7 @@ class _HomePageState extends State<HomePage> {
                     children: [
                       Row(
                         children: [
-                          const CircleAvatar(
-                            radius: 24,
-                            backgroundImage: NetworkImage(
-                              'https://lh3.googleusercontent.com/aida-public/AB6AXuDx0T2r31_IRbKTZXEe_zOL1tB4mJjiGDil6y75PEdh5rxOb-H5gmGh6EcNa3KAFhGCfBxMpKrQ0_F6u7WDLQ1woJBZC_gjy4Bqca8nfUIhKvNfOJK6its0Rk9dkJ4MzydQHzdKhck7Df0-uczaIKw64xISqcipdxhg-Zr338KMwt8QXw9nd3xOsT4suL5uHL-QHP20az_jig3K4fJPFp9ySUWC7WiXy2grj0FbGMkbCkodBDhuwmlV6cxNLUffCJ-kg1S_n1zdAjc',
-                            ),
-                          ),
+                          const ProfileAvatar(radius: 24),
 
                           const SizedBox(width: 12),
 
