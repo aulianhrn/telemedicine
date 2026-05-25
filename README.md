@@ -1,6 +1,6 @@
 # Telemedicine Posyandu Backend
 
-Backend Express.js untuk aplikasi Flutter Posyandu Kita.
+Backend Express.js untuk aplikasi Flutter Posyandu.
 
 ## Setup
 
