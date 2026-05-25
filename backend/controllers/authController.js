@@ -1,4 +1,6 @@
 const jwt = require('jsonwebtoken');
+const fs = require('fs/promises');
+const path = require('path');
 const pool = require('../config/db');
 const { hashPassword, verifyPassword } = require('../utils/password');
 
@@ -15,6 +17,38 @@ function createToken(user) {
   );
 }
 
+function getBaseUrl(req) {
+  return `${req.protocol}://${req.get('host')}`;
+}
+
+function withAvatarUrl(user, req) {
+  if (!user) {
+    return user;
+  }
+
+  return {
+    ...user,
+    ava_pict_url: user.ava_pict ? `${getBaseUrl(req)}${user.ava_pict}` : null,
+  };
+}
+
+async function removeAvatarFile(avatarPath) {
+  if (!avatarPath) {
+    return;
+  }
+
+  const relativePath = avatarPath.replace(/^\/+/, '');
+  const filePath = path.join(__dirname, '..', relativePath);
+
+  try {
+    await fs.unlink(filePath);
+  } catch (error) {
+    if (error.code !== 'ENOENT') {
+      console.warn(`Gagal menghapus file avatar lama: ${filePath}`, error.message);
+    }
+  }
+}
+
 async function login(req, res, next) {
   try {
     const { email, password } = req.body;
@@ -25,7 +59,7 @@ async function login(req, res, next) {
 
     const [rows] = await pool.query(
       `SELECT p.id, p.nama, p.email, p.password, p.role, p.no_hp,
-              i.id AS ibu_id, i.nik, i.alamat, i.tanggal_lahir AS tanggal_lahir_ibu,
+              i.id AS ibu_id, i.nik, i.alamat, i.tanggal_lahir AS tanggal_lahir_ibu, i.ava_pict,
               b.id AS bidan_id, b.nomor_str, b.tempat_kerja
        FROM pengguna p
        LEFT JOIN ibu i ON i.pengguna_id = p.id
@@ -44,7 +78,7 @@ async function login(req, res, next) {
 
     delete user.password;
 
-    return res.json({ token, user });
+    return res.json({ token, user: withAvatarUrl(user, req) });
   } catch (error) {
     return next(error);
   }
@@ -151,13 +185,14 @@ async function register(req, res, next) {
       nik: role === 'ibu' ? nik : null,
       alamat: role === 'ibu' ? alamat || null : null,
       tanggal_lahir_ibu: role === 'ibu' ? tanggal_lahir || null : null,
+      ava_pict: null,
       nomor_str: role === 'bidan' ? nomor_str || null : null,
       tempat_kerja: role === 'bidan' ? tempat_kerja || null : null,
     };
 
     return res.status(201).json({
       token: createToken(user),
-      user,
+      user: withAvatarUrl(user, req),
       message: 'Registrasi berhasil',
     });
   } catch (error) {
@@ -176,7 +211,7 @@ async function me(req, res, next) {
   try {
     const [rows] = await pool.query(
       `SELECT p.id, p.nama, p.email, p.role, p.no_hp,
-              i.id AS ibu_id, i.nik, i.alamat, i.tanggal_lahir AS tanggal_lahir_ibu,
+              i.id AS ibu_id, i.nik, i.alamat, i.tanggal_lahir AS tanggal_lahir_ibu, i.ava_pict,
               b.id AS bidan_id, b.nomor_str, b.tempat_kerja
        FROM pengguna p
        LEFT JOIN ibu i ON i.pengguna_id = p.id
@@ -190,10 +225,54 @@ async function me(req, res, next) {
       return res.status(404).json({ message: 'Pengguna tidak ditemukan' });
     }
 
-    return res.json(rows[0]);
+    return res.json(withAvatarUrl(rows[0], req));
   } catch (error) {
     return next(error);
   }
 }
 
-module.exports = { login, me, register };
+async function updateAvatar(req, res, next) {
+  try {
+    if (req.user.role !== 'ibu' || !req.user.ibuId) {
+      if (req.file) {
+        await removeAvatarFile(`/uploads/profile/${req.file.filename}`);
+      }
+      return res.status(403).json({ message: 'Foto profil hanya tersedia untuk pengguna ibu' });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ message: 'File ava_pict wajib diunggah' });
+    }
+
+    const avatarPath = `/uploads/profile/${req.file.filename}`;
+    const [rows] = await pool.query(
+      'SELECT ava_pict FROM ibu WHERE id = ? LIMIT 1',
+      [req.user.ibuId]
+    );
+
+    if (!rows[0]) {
+      await removeAvatarFile(avatarPath);
+      return res.status(404).json({ message: 'Data ibu tidak ditemukan' });
+    }
+
+    await pool.query(
+      'UPDATE ibu SET ava_pict = ? WHERE id = ?',
+      [avatarPath, req.user.ibuId]
+    );
+
+    await removeAvatarFile(rows[0].ava_pict);
+
+    return res.json({
+      message: 'Foto profil berhasil diperbarui',
+      ava_pict: avatarPath,
+      ava_pict_url: `${getBaseUrl(req)}${avatarPath}`,
+    });
+  } catch (error) {
+    if (req.file) {
+      await removeAvatarFile(`/uploads/profile/${req.file.filename}`);
+    }
+    return next(error);
+  }
+}
+
+module.exports = { login, me, register, updateAvatar };

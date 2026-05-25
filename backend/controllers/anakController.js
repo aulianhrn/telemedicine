@@ -1,4 +1,42 @@
+const fs = require('fs/promises');
+const path = require('path');
 const pool = require('../config/db');
+
+function getBaseUrl(req) {
+  return `${req.protocol}://${req.get('host')}`;
+}
+
+function withAvatarUrl(anak, req) {
+  if (!anak) {
+    return anak;
+  }
+
+  return {
+    ...anak,
+    ava_pict_url: anak.ava_pict ? `${getBaseUrl(req)}${anak.ava_pict}` : null,
+  };
+}
+
+function mapWithAvatarUrl(rows, req) {
+  return rows.map((row) => withAvatarUrl(row, req));
+}
+
+async function removeAvatarFile(avatarPath) {
+  if (!avatarPath) {
+    return;
+  }
+
+  const relativePath = avatarPath.replace(/^\/+/, '');
+  const filePath = path.join(__dirname, '..', relativePath);
+
+  try {
+    await fs.unlink(filePath);
+  } catch (error) {
+    if (error.code !== 'ENOENT') {
+      console.warn(`Gagal menghapus file avatar anak lama: ${filePath}`, error.message);
+    }
+  }
+}
 
 async function listAnak(req, res, next) {
   try {
@@ -34,7 +72,7 @@ async function listAnak(req, res, next) {
       params
     );
 
-    return res.json(rows);
+    return res.json(mapWithAvatarUrl(rows, req));
   } catch (error) {
     return next(error);
   }
@@ -62,7 +100,11 @@ async function getAnak(req, res, next) {
       return res.status(404).json({ message: 'Data anak tidak ditemukan' });
     }
 
-    return res.json(rows[0]);
+    if (req.user.role === 'ibu' && Number(rows[0].ibu_id) !== Number(req.user.ibuId)) {
+      return res.status(403).json({ message: 'Anda tidak memiliki akses ke data anak ini' });
+    }
+
+    return res.json(withAvatarUrl(rows[0], req));
   } catch (error) {
     return next(error);
   }
@@ -82,21 +124,84 @@ async function createAnak(req, res, next) {
     const targetIbuId = req.user.role === 'ibu' ? req.user.ibuId : ibu_id;
 
     if (!targetIbuId || !nama || !jenis_kelamin || !tanggal_lahir) {
+      if (req.file) {
+        await removeAvatarFile(`/uploads/anak/${req.file.filename}`);
+      }
       return res.status(400).json({
         message: 'ibu_id, nama, jenis_kelamin, dan tanggal_lahir wajib diisi',
       });
     }
 
+    const avatarPath = req.file ? `/uploads/anak/${req.file.filename}` : null;
+
     const [result] = await pool.query(
-      `INSERT INTO anak (ibu_id, nama, jenis_kelamin, tanggal_lahir, berat_lahir, tinggi_lahir)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [targetIbuId, nama, jenis_kelamin, tanggal_lahir, berat_lahir || null, tinggi_lahir || null]
+      `INSERT INTO anak (ibu_id, nama, jenis_kelamin, tanggal_lahir, berat_lahir, tinggi_lahir, ava_pict)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [
+        targetIbuId,
+        nama,
+        jenis_kelamin,
+        tanggal_lahir,
+        berat_lahir || null,
+        tinggi_lahir || null,
+        avatarPath,
+      ]
     );
 
-    return res.status(201).json({ id: result.insertId, message: 'Data anak berhasil ditambahkan' });
+    return res.status(201).json({
+      id: result.insertId,
+      message: 'Data anak berhasil ditambahkan',
+      ava_pict: avatarPath,
+      ava_pict_url: avatarPath ? `${getBaseUrl(req)}${avatarPath}` : null,
+    });
   } catch (error) {
+    if (req.file) {
+      await removeAvatarFile(`/uploads/anak/${req.file.filename}`);
+    }
     return next(error);
   }
 }
 
-module.exports = { listAnak, getAnak, createAnak };
+async function updateAnakAvatar(req, res, next) {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'File ava_pict wajib diunggah' });
+    }
+
+    const [rows] = await pool.query(
+      'SELECT id, ibu_id, ava_pict FROM anak WHERE id = ? LIMIT 1',
+      [req.params.id]
+    );
+
+    if (!rows[0]) {
+      await removeAvatarFile(`/uploads/anak/${req.file.filename}`);
+      return res.status(404).json({ message: 'Data anak tidak ditemukan' });
+    }
+
+    if (req.user.role === 'ibu' && Number(rows[0].ibu_id) !== Number(req.user.ibuId)) {
+      await removeAvatarFile(`/uploads/anak/${req.file.filename}`);
+      return res.status(403).json({ message: 'Anda tidak memiliki akses ke data anak ini' });
+    }
+
+    const avatarPath = `/uploads/anak/${req.file.filename}`;
+    await pool.query(
+      'UPDATE anak SET ava_pict = ? WHERE id = ?',
+      [avatarPath, req.params.id]
+    );
+
+    await removeAvatarFile(rows[0].ava_pict);
+
+    return res.json({
+      message: 'Foto profil anak berhasil diperbarui',
+      ava_pict: avatarPath,
+      ava_pict_url: `${getBaseUrl(req)}${avatarPath}`,
+    });
+  } catch (error) {
+    if (req.file) {
+      await removeAvatarFile(`/uploads/anak/${req.file.filename}`);
+    }
+    return next(error);
+  }
+}
+
+module.exports = { listAnak, getAnak, createAnak, updateAnakAvatar };

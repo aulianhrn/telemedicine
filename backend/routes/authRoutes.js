@@ -1,11 +1,14 @@
 const express = require('express');
 const auth = require('../middleware/auth');
-const { login, me, register } = require('../controllers/authController');
+const uploadAvatar = require('../middleware/uploadAvatar');
+const { login, me, register, updateAvatar } = require('../controllers/authController');
 
 const router = express.Router();
 
 router.post('/login', login);
 router.post('/register', register);
 router.get('/me', auth, me);
+router.post('/me/avatar', auth, uploadAvatar.single('ava_pict'), updateAvatar);
+router.patch('/me/avatar', auth, uploadAvatar.single('ava_pict'), updateAvatar);
 
 module.exports = router;

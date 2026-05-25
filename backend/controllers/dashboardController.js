@@ -1,5 +1,20 @@
 const pool = require('../config/db');
 
+function getBaseUrl(req) {
+  return `${req.protocol}://${req.get('host')}`;
+}
+
+function withAnakAvatarUrl(anak, req) {
+  if (!anak) {
+    return null;
+  }
+
+  return {
+    ...anak,
+    ava_pict_url: anak.ava_pict ? `${getBaseUrl(req)}${anak.ava_pict}` : null,
+  };
+}
+
 async function dashboard(req, res, next) {
   try {
     const params = [];
@@ -45,7 +60,7 @@ async function dashboard(req, res, next) {
     );
 
     return res.json({
-      anak_utama: anakRows[0] || null,
+      anak_utama: withAnakAvatarUrl(anakRows[0], req),
       imunisasi_mendatang: imunisasiRows[0] || null,
     });
   } catch (error) {
