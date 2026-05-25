@@ -35,6 +35,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/anak', anakRoutes);
 app.use('/api/imunisasi', imunisasiRoutes);
 app.use('/api/pemeriksaan', pemeriksaanRoutes);
+app.use('/api/immunizations', imunisasiRoutes);
+app.use('/api/examinations', pemeriksaanRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 
 app.use((req, res) => {
