@@ -1,6 +1,7 @@
 const fs = require('fs/promises');
 const path = require('path');
 const pool = require('../config/db');
+const { removeAvatarFileData, saveAvatarFile } = require('../utils/avatarFileStore');
 
 function getBaseUrl(req) {
   return `${req.protocol}://${req.get('host')}`;
@@ -36,6 +37,8 @@ async function removeAvatarFile(avatarPath) {
       console.warn(`Gagal menghapus file avatar anak lama: ${filePath}`, error.message);
     }
   }
+
+  await removeAvatarFileData(avatarPath);
 }
 
 async function listAnak(req, res, next) {
@@ -133,6 +136,7 @@ async function createAnak(req, res, next) {
     }
 
     const avatarPath = req.file ? `/uploads/anak/${req.file.filename}` : null;
+    await saveAvatarFile(avatarPath, req.file);
 
     const [result] = await pool.query(
       `INSERT INTO anak (ibu_id, nama, jenis_kelamin, tanggal_lahir, berat_lahir, tinggi_lahir, ava_pict)
@@ -184,6 +188,8 @@ async function updateAnakAvatar(req, res, next) {
     }
 
     const avatarPath = `/uploads/anak/${req.file.filename}`;
+    await saveAvatarFile(avatarPath, req.file);
+
     await pool.query(
       'UPDATE anak SET ava_pict = ? WHERE id = ?',
       [avatarPath, req.params.id]

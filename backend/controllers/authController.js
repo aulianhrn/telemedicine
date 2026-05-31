@@ -3,6 +3,7 @@ const fs = require('fs/promises');
 const path = require('path');
 const pool = require('../config/db');
 const { hashPassword, verifyPassword } = require('../utils/password');
+const { removeAvatarFileData, saveAvatarFile } = require('../utils/avatarFileStore');
 
 function createToken(user) {
   return jwt.sign(
@@ -47,6 +48,8 @@ async function removeAvatarFile(avatarPath) {
       console.warn(`Gagal menghapus file avatar lama: ${filePath}`, error.message);
     }
   }
+
+  await removeAvatarFileData(avatarPath);
 }
 
 async function login(req, res, next) {
@@ -245,6 +248,8 @@ async function updateAvatar(req, res, next) {
     }
 
     const avatarPath = `/uploads/profile/${req.file.filename}`;
+    await saveAvatarFile(avatarPath, req.file);
+
     const [rows] = await pool.query(
       'SELECT ava_pict FROM ibu WHERE id = ? LIMIT 1',
       [req.user.ibuId]

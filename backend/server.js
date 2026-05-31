@@ -5,6 +5,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const path = require('path');
 const pool = require('./config/db');
+const { serveUploadedFile } = require('./utils/avatarFileStore');
 
 const authRoutes = require('./routes/authRoutes');
 const anakRoutes = require('./routes/anakRoutes');
@@ -19,7 +20,7 @@ app.set('trust proxy', true);
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 app.use(cors());
 app.use(express.json());
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads', serveUploadedFile, express.static(path.join(__dirname, 'uploads')));
 
 app.get('/', (req, res) => {
   res.json({ message: 'Telemedicine Posyandu API aktif' });
