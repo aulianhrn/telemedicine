@@ -12,6 +12,7 @@ const anakRoutes = require('./routes/anakRoutes');
 const imunisasiRoutes = require('./routes/imunisasiRoutes');
 const pemeriksaanRoutes = require('./routes/pemeriksaanRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
 
 const app = express();
 const port = Number(process.env.PORT || 8080);
@@ -42,6 +43,7 @@ app.use('/api/pemeriksaan', pemeriksaanRoutes);
 app.use('/api/immunizations', imunisasiRoutes);
 app.use('/api/examinations', pemeriksaanRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 app.use((req, res) => {
   res.status(404).json({ message: 'Endpoint tidak ditemukan' });
