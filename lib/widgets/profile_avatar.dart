@@ -11,8 +11,6 @@ class ProfileAvatar extends StatelessWidget {
     this.backgroundColor = const Color(0xFFE5EEFF),
   });
 
-  static const String fallbackImageUrl = "https://i.pravatar.cc/300?img=32";
-
   @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder<int>(
@@ -30,17 +28,16 @@ class ProfileAvatar extends StatelessWidget {
         }
 
         if (photoUrl != null) {
-          return CircleAvatar(
+          return _NetworkAvatar(
             radius: radius,
             backgroundColor: backgroundColor,
-            backgroundImage: NetworkImage(_versionedUrl(photoUrl, version)),
+            url: _versionedUrl(photoUrl, version),
           );
         }
 
-        return CircleAvatar(
+        return _FallbackAvatar(
           radius: radius,
           backgroundColor: backgroundColor,
-          backgroundImage: const NetworkImage(fallbackImageUrl),
         );
       },
     );
@@ -55,5 +52,56 @@ class ProfileAvatar extends StatelessWidget {
     return uri
         .replace(queryParameters: {...uri.queryParameters, 'v': '$version'})
         .toString();
+  }
+}
+
+class _NetworkAvatar extends StatelessWidget {
+  final double radius;
+  final Color backgroundColor;
+  final String url;
+
+  const _NetworkAvatar({
+    required this.radius,
+    required this.backgroundColor,
+    required this.url,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final size = radius * 2;
+
+    return ClipOval(
+      child: Container(
+        width: size,
+        height: size,
+        color: backgroundColor,
+        child: Image.network(
+          url,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            return _FallbackAvatar(
+              radius: radius,
+              backgroundColor: backgroundColor,
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _FallbackAvatar extends StatelessWidget {
+  final double radius;
+  final Color backgroundColor;
+
+  const _FallbackAvatar({required this.radius, required this.backgroundColor});
+
+  @override
+  Widget build(BuildContext context) {
+    return CircleAvatar(
+      radius: radius,
+      backgroundColor: backgroundColor,
+      child: Icon(Icons.person, color: const Color(0xFF006E2F), size: radius),
+    );
   }
 }

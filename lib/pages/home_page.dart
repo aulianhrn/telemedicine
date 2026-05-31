@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:telemedicine/app_routes.dart';
+import 'package:telemedicine/models/growth_summary.dart';
 import 'package:telemedicine/services/api_service.dart';
 import 'package:telemedicine/services/formatters.dart';
 import 'package:telemedicine/services/session_manager.dart';
 import 'package:telemedicine/widgets/bottom_navbar.dart';
+import 'package:telemedicine/widgets/growth_summary_widgets.dart';
 import 'package:telemedicine/widgets/profile_avatar.dart';
 
 class HomePage extends StatefulWidget {
@@ -187,12 +189,104 @@ class ArticleCard extends StatelessWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  late Future<Map<String, dynamic>> dashboardFuture;
+  late Future<_HomeData> dashboardFuture;
 
   @override
   void initState() {
     super.initState();
-    dashboardFuture = ApiService.dashboard();
+    dashboardFuture = _loadHomeData();
+  }
+
+  Future<_HomeData> _loadHomeData() async {
+    final dashboard = await ApiService.dashboard();
+    final anak = dashboard['anak_utama'] as Map<String, dynamic>?;
+    final childId = _childId(anak);
+
+    if (childId == null) {
+      return _HomeData(dashboard: dashboard);
+    }
+
+    try {
+      var growthSummary = await ApiService.mobileGrowthSummary(childId);
+      if (growthSummary.weightChart.points.isEmpty ||
+          growthSummary.heightChart.points.isEmpty) {
+        growthSummary = await _summaryFromCheckups(childId, growthSummary);
+      }
+      return _HomeData(dashboard: dashboard, growthSummary: growthSummary);
+    } catch (error) {
+      try {
+        final growthSummary = await _summaryFromCheckups(childId);
+        return _HomeData(dashboard: dashboard, growthSummary: growthSummary);
+      } catch (_) {
+        return _HomeData(
+          dashboard: dashboard,
+          growthError: error.toString().replaceFirst('Exception: ', ''),
+        );
+      }
+    }
+  }
+
+  Future<GrowthSummary> _summaryFromCheckups(
+    int childId, [
+    GrowthSummary? current,
+  ]) async {
+    final checkups = await ApiService.pemeriksaan(anakId: childId);
+    final rows =
+        checkups
+            .whereType<Map>()
+            .map((item) => Map<String, dynamic>.from(item))
+            .toList()
+          ..sort((a, b) {
+            final aDate = DateTime.tryParse(
+              (a['tanggal_pemeriksaan'] ?? a['examination_date'] ?? '')
+                  .toString(),
+            );
+            final bDate = DateTime.tryParse(
+              (b['tanggal_pemeriksaan'] ?? b['examination_date'] ?? '')
+                  .toString(),
+            );
+
+            if (aDate == null || bDate == null) {
+              return 0;
+            }
+
+            return aDate.compareTo(bDate);
+          });
+
+    final fallback = GrowthSummary.fromJson({
+      'child_id': childId,
+      'weight_chart': {
+        'title': 'Grafik Berat Badan',
+        'unit': 'kg',
+        'data': rows,
+      },
+      'height_chart': {
+        'title': 'Grafik Tinggi Badan',
+        'unit': 'cm',
+        'data': rows,
+      },
+      'nutrition_status_card': {
+        'title': 'Status Gizi dan Z-Score',
+        'data': rows.isEmpty ? {} : rows.last,
+      },
+    });
+
+    if (current == null) {
+      return fallback;
+    }
+
+    return GrowthSummary(
+      childId: current.childId ?? fallback.childId,
+      weightChart: current.weightChart.points.isEmpty
+          ? fallback.weightChart
+          : current.weightChart,
+      heightChart: current.heightChart.points.isEmpty
+          ? fallback.heightChart
+          : current.heightChart,
+      nutritionStatus: current.nutritionStatus.hasData
+          ? current.nutritionStatus
+          : fallback.nutritionStatus,
+    );
   }
 
   @override
@@ -213,7 +307,7 @@ class _HomePageState extends State<HomePage> {
           : null,
 
       body: SafeArea(
-        child: FutureBuilder<Map<String, dynamic>>(
+        child: FutureBuilder<_HomeData>(
           future: dashboardFuture,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
@@ -233,9 +327,12 @@ class _HomePageState extends State<HomePage> {
             }
 
             final user = SessionManager.user;
-            final anak = snapshot.data?['anak_utama'] as Map<String, dynamic>?;
+            final homeData = snapshot.data;
+            final anak =
+                homeData?.dashboard['anak_utama'] as Map<String, dynamic>?;
             final imunisasi =
-                snapshot.data?['imunisasi_mendatang'] as Map<String, dynamic>?;
+                homeData?.dashboard['imunisasi_mendatang']
+                    as Map<String, dynamic>?;
             final childName =
                 anak?['nama']?.toString() ?? 'Belum ada data anak';
             final statusGizi =
@@ -488,11 +585,98 @@ class _HomePageState extends State<HomePage> {
                       ),
                     ),
                   ),
+
+                  const SizedBox(height: 20),
+
+                  _growthChartsSection(
+                    homeData?.growthSummary,
+                    homeData?.growthError,
+                  ),
                 ],
               ),
             );
           },
         ),
+      ),
+    );
+  }
+
+  Widget _growthChartsSection(GrowthSummary? summary, String? error) {
+    if (error != null) {
+      return _InfoMessageCard(
+        icon: Icons.show_chart,
+        message: 'Grafik pertumbuhan belum bisa dimuat. $error',
+      );
+    }
+
+    if (summary == null) {
+      return const _InfoMessageCard(
+        icon: Icons.show_chart,
+        message: 'Grafik pertumbuhan akan muncul setelah data anak tersedia.',
+      );
+    }
+
+    return Column(
+      children: [
+        GrowthChartCard(
+          chart: summary.weightChart,
+          color: const Color(0xFF006E2F),
+          icon: Icons.monitor_weight,
+        ),
+        const SizedBox(height: 14),
+        GrowthChartCard(
+          chart: summary.heightChart,
+          color: const Color(0xFF006686),
+          icon: Icons.height,
+        ),
+      ],
+    );
+  }
+
+  int? _childId(Map<String, dynamic>? child) {
+    final id = child?['id'] ?? child?['anak_id'] ?? child?['child_id'];
+    if (id is int) {
+      return id;
+    }
+
+    return int.tryParse(id?.toString() ?? '');
+  }
+}
+
+class _HomeData {
+  final Map<String, dynamic> dashboard;
+  final GrowthSummary? growthSummary;
+  final String? growthError;
+
+  const _HomeData({
+    required this.dashboard,
+    this.growthSummary,
+    this.growthError,
+  });
+}
+
+class _InfoMessageCard extends StatelessWidget {
+  final IconData icon;
+  final String message;
+
+  const _InfoMessageCard({required this.icon, required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: const Color(0xFF006E2F)),
+          const SizedBox(width: 12),
+          Expanded(child: Text(message)),
+        ],
       ),
     );
   }

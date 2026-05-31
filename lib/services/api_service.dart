@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
+import 'package:telemedicine/models/growth_summary.dart';
 import 'package:telemedicine/services/session_manager.dart';
 
 class ApiService {
@@ -197,6 +198,13 @@ class ApiService {
   static Future<List<dynamic>> pemeriksaan({int? anakId}) {
     final query = anakId == null ? '' : '?anak_id=$anakId';
     return _getList('/pemeriksaan$query');
+  }
+
+  static Future<GrowthSummary> mobileGrowthSummary(int childId) async {
+    final data = await _getMap(
+      '/pemeriksaan/anak/$childId/mobile-growth-summary',
+    );
+    return GrowthSummary.fromJson(data);
   }
 
   static Future<Map<String, dynamic>> _getMap(String path) async {

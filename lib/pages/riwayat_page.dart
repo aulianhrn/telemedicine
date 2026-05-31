@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:telemedicine/app_routes.dart';
+import 'package:telemedicine/models/growth_summary.dart';
 import 'package:telemedicine/services/api_service.dart';
 import 'package:telemedicine/services/formatters.dart';
 import 'package:telemedicine/widgets/bottom_navbar.dart';
+import 'package:telemedicine/widgets/growth_summary_widgets.dart';
 import 'package:telemedicine/widgets/profile_avatar.dart';
 
 class RiwayatPage extends StatelessWidget {
@@ -152,6 +154,8 @@ class RiwayatPage extends StatelessWidget {
                     ],
                   ),
                 ),
+                const SizedBox(height: 14),
+                _nutritionStatusSection(first),
                 const SizedBox(height: 24),
                 if (items.isEmpty)
                   Container(
@@ -213,6 +217,78 @@ class RiwayatPage extends StatelessWidget {
     );
   }
 
+  Widget _nutritionStatusSection(Map<String, dynamic>? latestCheckup) {
+    final childId = _childId(latestCheckup);
+
+    if (childId == null) {
+      return NutritionStatusCard(data: _nutritionFromHistory(latestCheckup));
+    }
+
+    return FutureBuilder<GrowthSummary>(
+      future: ApiService.mobileGrowthSummary(childId),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: const Row(
+              children: [
+                SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                SizedBox(width: 12),
+                Text('Memuat status gizi dan z-score...'),
+              ],
+            ),
+          );
+        }
+
+        if (snapshot.hasError || snapshot.data == null) {
+          return NutritionStatusCard(
+            data: _nutritionFromHistory(latestCheckup),
+          );
+        }
+
+        return NutritionStatusCard(data: snapshot.data!.nutritionStatus);
+      },
+    );
+  }
+
+  NutritionStatusData _nutritionFromHistory(
+    Map<String, dynamic>? latestCheckup,
+  ) {
+    final data = latestCheckup == null
+        ? <String, dynamic>{}
+        : Map<String, dynamic>.from(latestCheckup);
+
+    return NutritionStatusData(
+      title: 'Status Gizi dan Z-Score',
+      status: data['status_gizi']?.toString() ?? '-',
+      zScore:
+          data['z_score']?.toString() ??
+          data['zscore']?.toString() ??
+          data['zScore']?.toString() ??
+          '-',
+      dateLabel: displayDate(data['tanggal_pemeriksaan']),
+      rawData: data,
+    );
+  }
+
+  int? _childId(Map<String, dynamic>? data) {
+    final id = data?['anak_id'] ?? data?['child_id'] ?? data?['id_anak'];
+    if (id is int) {
+      return id;
+    }
+
+    return int.tryParse(id?.toString() ?? '');
+  }
+
   Widget timelineItem({
     required String date,
     required String weight,
@@ -222,111 +298,70 @@ class RiwayatPage extends StatelessWidget {
     required String note,
     required bool isGood,
   }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 24),
+    final accentColor = isGood
+        ? const Color(0xFF16A34A)
+        : const Color(0xFFF97316);
+    final noteColor = isGood
+        ? const Color(0xFF0284C7)
+        : const Color(0xFFDB2777);
+
+    return IntrinsicHeight(
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Column(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: const BoxDecoration(
-                  color: Color(0xFF006E2F),
-                  shape: BoxShape.circle,
+          SizedBox(
+            width: 42,
+            child: Stack(
+              alignment: Alignment.topCenter,
+              children: [
+                Positioned(
+                  top: 0,
+                  bottom: 0,
+                  child: Container(width: 1.5, color: const Color(0xFFDDE5DF)),
                 ),
-                child: const Icon(
-                  Icons.calendar_today,
-                  color: Colors.white,
-                  size: 18,
-                ),
-              ),
-              Container(width: 2, height: 260, color: Colors.grey.shade300),
-            ],
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Container(
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                border: Border(
-                  left: BorderSide(
-                    color: isGood ? Colors.green : Colors.pink,
-                    width: 5,
-                  ),
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          date,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      Icon(
-                        isGood ? Icons.verified : Icons.warning,
-                        color: isGood ? Colors.green : Colors.orange,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(child: measurementCard("Berat Badan", weight)),
-                      const SizedBox(width: 10),
-                      Expanded(child: measurementCard("Tinggi Badan", height)),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  measurementCard("Lingkar Kepala", head),
-                  const SizedBox(height: 16),
-                  Container(
-                    padding: const EdgeInsets.all(14),
+                Positioned(
+                  top: 0,
+                  child: Container(
+                    width: 34,
+                    height: 34,
                     decoration: BoxDecoration(
-                      color: Colors.grey.shade100,
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(
-                          isGood
-                              ? Icons.medical_information
-                              : Icons.chat_bubble,
-                          color: isGood ? Colors.blue : Colors.pink,
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                noteTitle,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: isGood ? Colors.blue : Colors.pink,
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              Text(note, style: const TextStyle(height: 1.5)),
-                            ],
-                          ),
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: accentColor.withValues(alpha: 0.18),
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: accentColor.withValues(alpha: 0.12),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
                         ),
                       ],
                     ),
+                    child: Icon(
+                      Icons.calendar_month,
+                      color: accentColor,
+                      size: 21,
+                    ),
                   ),
-                ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 20),
+              child: _timelineCard(
+                date: date,
+                weight: weight,
+                height: height,
+                head: head,
+                noteTitle: noteTitle,
+                note: note,
+                isGood: isGood,
+                accentColor: accentColor,
+                noteColor: noteColor,
               ),
             ),
           ),
@@ -335,23 +370,158 @@ class RiwayatPage extends StatelessWidget {
     );
   }
 
-  Widget measurementCard(String title, String value) {
+  Widget _timelineCard({
+    required String date,
+    required String weight,
+    required String height,
+    required String head,
+    required String noteTitle,
+    required String note,
+    required bool isGood,
+    required Color accentColor,
+    required Color noteColor,
+  }) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(14),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: accentColor.withValues(alpha: 0.16)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.045),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: const TextStyle(color: Colors.grey, fontSize: 12)),
-          const SizedBox(height: 6),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  date,
+                  style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF111827),
+                  ),
+                ),
+              ),
+              Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: accentColor.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  isGood ? Icons.verified : Icons.warning_amber,
+                  color: accentColor,
+                  size: 18,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: measurementCard(
+                  "Berat Badan",
+                  weight,
+                  Icons.monitor_weight,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: measurementCard("Tinggi Badan", height, Icons.height),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          FractionallySizedBox(
+            widthFactor: 0.55,
+            child: measurementCard("Lingkar Kepala", head, Icons.face),
+          ),
+          const SizedBox(height: 16),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: noteColor.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: noteColor.withValues(alpha: 0.12)),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        noteTitle,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          color: noteColor,
+                        ),
+                      ),
+                      const SizedBox(height: 7),
+                      Text(
+                        note,
+                        style: const TextStyle(
+                          height: 1.45,
+                          fontSize: 13,
+                          color: Color(0xFF1F2937),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget measurementCard(String title, String value, IconData icon) {
+    return Container(
+      constraints: const BoxConstraints(minHeight: 76),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAF8),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE7EEE8)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 14, color: Colors.grey.shade500),
+              const SizedBox(width: 5),
+              Expanded(
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: Colors.grey.shade600, fontSize: 11),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
           Text(
             value,
             style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
+              fontSize: 15,
+              fontWeight: FontWeight.w800,
               color: Color(0xFF006E2F),
             ),
           ),

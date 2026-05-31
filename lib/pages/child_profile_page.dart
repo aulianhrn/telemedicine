@@ -3,9 +3,11 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:telemedicine/app_routes.dart';
+import 'package:telemedicine/models/growth_summary.dart';
 import 'package:telemedicine/services/api_service.dart';
 import 'package:telemedicine/services/formatters.dart';
 import 'package:telemedicine/widgets/bottom_navbar.dart';
+import 'package:telemedicine/widgets/growth_summary_widgets.dart';
 import 'package:telemedicine/widgets/profile_avatar.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -233,69 +235,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   ],
                 ),
                 const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        "Ringkasan Pertumbuhan",
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      const Text(
-                        "Berdasarkan pemeriksaan terakhir",
-                        style: TextStyle(color: Colors.grey),
-                      ),
-                      const SizedBox(height: 20),
-                      Container(
-                        height: 180,
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          color: Colors.green.shade50,
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: const Center(
-                          child: Icon(
-                            Icons.show_chart,
-                            size: 80,
-                            color: Colors.green,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: Colors.green.shade50,
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Icon(Icons.info_outline, color: Colors.green),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Text(
-                                child['tanggal_pemeriksaan'] == null
-                                    ? "Belum ada pemeriksaan untuk anak ini."
-                                    : "Pemeriksaan terakhir pada ${displayDate(child['tanggal_pemeriksaan'])}.",
-                                style: const TextStyle(height: 1.5),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                _growthSummarySection(child),
                 const SizedBox(height: 16),
                 InkWell(
                   borderRadius: BorderRadius.circular(20),
@@ -482,16 +422,23 @@ class _ProfilePageState extends State<ProfilePage> {
     }
 
     if (photoUrl != null) {
-      return CircleAvatar(
-        backgroundColor: const Color(0xFFE5EEFF),
-        backgroundImage: NetworkImage(_versionedUrl(photoUrl)),
+      return ClipOval(
+        child: Container(
+          color: const Color(0xFFE5EEFF),
+          child: Image.network(
+            _versionedUrl(photoUrl),
+            fit: BoxFit.cover,
+            width: double.infinity,
+            height: double.infinity,
+            errorBuilder: (context, error, stackTrace) {
+              return const _ChildAvatarFallback();
+            },
+          ),
+        ),
       );
     }
 
-    return const CircleAvatar(
-      backgroundColor: Color(0xFFE5EEFF),
-      child: Icon(Icons.child_care, color: Color(0xFF006E2F), size: 52),
-    );
+    return const _ChildAvatarFallback();
   }
 
   Widget _photoOption({
@@ -578,6 +525,148 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
+  Widget _growthSummarySection(Map<String, dynamic> child) {
+    final childId = _childId(child);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            "Ringkasan Pertumbuhan",
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            "Grafik berat badan dan tinggi badan",
+            style: TextStyle(color: Colors.grey),
+          ),
+          const SizedBox(height: 16),
+          if (childId == null)
+            const _GrowthSummaryMessage(
+              message:
+                  "Grafik pertumbuhan akan muncul setelah data anak tersedia.",
+            )
+          else
+            FutureBuilder<GrowthSummary>(
+              future: _loadGrowthSummary(childId),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const _GrowthSummaryMessage(
+                    isLoading: true,
+                    message: "Memuat grafik pertumbuhan...",
+                  );
+                }
+
+                if (snapshot.hasError || snapshot.data == null) {
+                  return _GrowthSummaryMessage(
+                    message:
+                        "Grafik pertumbuhan belum bisa dimuat. ${snapshot.error.toString().replaceFirst('Exception: ', '')}",
+                  );
+                }
+
+                final summary = snapshot.data!;
+                return Column(
+                  children: [
+                    GrowthChartCard(
+                      chart: summary.weightChart,
+                      color: const Color(0xFF006E2F),
+                      icon: Icons.monitor_weight,
+                    ),
+                    const SizedBox(height: 14),
+                    GrowthChartCard(
+                      chart: summary.heightChart,
+                      color: const Color(0xFF006686),
+                      icon: Icons.height,
+                    ),
+                  ],
+                );
+              },
+            ),
+        ],
+      ),
+    );
+  }
+
+  Future<GrowthSummary> _loadGrowthSummary(int childId) async {
+    var growthSummary = await ApiService.mobileGrowthSummary(childId);
+    if (growthSummary.weightChart.points.isEmpty ||
+        growthSummary.heightChart.points.isEmpty) {
+      growthSummary = await _summaryFromCheckups(childId, growthSummary);
+    }
+
+    return growthSummary;
+  }
+
+  Future<GrowthSummary> _summaryFromCheckups(
+    int childId, [
+    GrowthSummary? current,
+  ]) async {
+    final checkups = await ApiService.pemeriksaan(anakId: childId);
+    final rows =
+        checkups
+            .whereType<Map>()
+            .map((item) => Map<String, dynamic>.from(item))
+            .toList()
+          ..sort((a, b) {
+            final aDate = DateTime.tryParse(
+              (a['tanggal_pemeriksaan'] ?? a['examination_date'] ?? '')
+                  .toString(),
+            );
+            final bDate = DateTime.tryParse(
+              (b['tanggal_pemeriksaan'] ?? b['examination_date'] ?? '')
+                  .toString(),
+            );
+
+            if (aDate == null || bDate == null) {
+              return 0;
+            }
+
+            return aDate.compareTo(bDate);
+          });
+
+    final fallback = GrowthSummary.fromJson({
+      'child_id': childId,
+      'weight_chart': {
+        'title': 'Grafik Berat Badan',
+        'unit': 'kg',
+        'data': rows,
+      },
+      'height_chart': {
+        'title': 'Grafik Tinggi Badan',
+        'unit': 'cm',
+        'data': rows,
+      },
+      'nutrition_status_card': {
+        'title': 'Status Gizi dan Z-Score',
+        'data': rows.isEmpty ? {} : rows.last,
+      },
+    });
+
+    if (current == null) {
+      return fallback;
+    }
+
+    return GrowthSummary(
+      childId: current.childId ?? fallback.childId,
+      weightChart: current.weightChart.points.isEmpty
+          ? fallback.weightChart
+          : current.weightChart,
+      heightChart: current.heightChart.points.isEmpty
+          ? fallback.heightChart
+          : current.heightChart,
+      nutritionStatus: current.nutritionStatus.hasData
+          ? current.nutritionStatus
+          : fallback.nutritionStatus,
+    );
+  }
+
   Widget statCard({
     required IconData icon,
     required String title,
@@ -617,6 +706,51 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _GrowthSummaryMessage extends StatelessWidget {
+  final String message;
+  final bool isLoading;
+
+  const _GrowthSummaryMessage({required this.message, this.isLoading = false});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8F9FF),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        children: [
+          if (isLoading)
+            const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          else
+            const Icon(Icons.show_chart, color: Color(0xFF006E2F)),
+          const SizedBox(width: 12),
+          Expanded(child: Text(message)),
+        ],
+      ),
+    );
+  }
+}
+
+class _ChildAvatarFallback extends StatelessWidget {
+  const _ChildAvatarFallback();
+
+  @override
+  Widget build(BuildContext context) {
+    return const CircleAvatar(
+      backgroundColor: Color(0xFFE5EEFF),
+      child: Icon(Icons.child_care, color: Color(0xFF006E2F), size: 52),
     );
   }
 }
