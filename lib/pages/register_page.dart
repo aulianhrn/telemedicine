@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:telemedicine/app_routes.dart';
 import 'package:telemedicine/services/api_service.dart';
+import 'package:telemedicine/services/notification_service.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -77,6 +78,7 @@ class _RegisterPageState extends State<RegisterPage> {
             ? null
             : tanggalLahirController.text.trim(),
       );
+      await NotificationService.setupAfterAuth();
 
       if (!mounted) {
         return;

@@ -6,6 +6,7 @@ import 'package:telemedicine/services/formatters.dart';
 import 'package:telemedicine/services/session_manager.dart';
 import 'package:telemedicine/widgets/bottom_navbar.dart';
 import 'package:telemedicine/widgets/growth_summary_widgets.dart';
+import 'package:telemedicine/widgets/notification_bell.dart';
 import 'package:telemedicine/widgets/profile_avatar.dart';
 
 class HomePage extends StatefulWidget {
@@ -370,13 +371,7 @@ class _HomePageState extends State<HomePage> {
                         ],
                       ),
 
-                      IconButton(
-                        onPressed: () {},
-                        icon: const Icon(
-                          Icons.notifications_outlined,
-                          color: Color(0xFF006E2F),
-                        ),
-                      ),
+                      const NotificationBell(),
                     ],
                   ),
 

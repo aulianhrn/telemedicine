@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:telemedicine/app_routes.dart';
 import 'package:telemedicine/services/api_service.dart';
+import 'package:telemedicine/services/notification_service.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -32,6 +33,7 @@ class _LoginPageState extends State<LoginPage> {
         emailController.text.trim(),
         passwordController.text,
       );
+      await NotificationService.setupAfterAuth();
 
       if (!mounted) {
         return;

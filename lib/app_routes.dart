@@ -6,4 +6,5 @@ class AppRoutes {
   static const riwayat = '/riwayat';
   static const profile = '/profile';
   static const childProfile = '/child-profile';
+  static const notifications = '/notifications';
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:telemedicine/services/api_service.dart';
 import 'package:telemedicine/services/formatters.dart';
 import 'package:telemedicine/widgets/bottom_navbar.dart';
+import 'package:telemedicine/widgets/notification_bell.dart';
 import 'package:telemedicine/widgets/profile_avatar.dart';
 
 class JadwalImunisasiPage extends StatefulWidget {
@@ -50,12 +51,7 @@ class _JadwalImunisasiPageState extends State<JadwalImunisasiPage> {
             ),
           ],
         ),
-        actions: [
-          IconButton(
-            onPressed: () {},
-            icon: const Icon(Icons.notifications, color: Color(0xFF006E2F)),
-          ),
-        ],
+        actions: [const NotificationBell()],
       ),
 
       // ================= BODY =================

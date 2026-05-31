@@ -57,6 +57,37 @@ Aplikasi juga memiliki fallback ke endpoint riwayat pemeriksaan bila data grafik
 GET /api/pemeriksaan?anak_id=:childId
 ```
 
+## Notifikasi
+
+Aplikasi memakai dua jenis notifikasi:
+
+- Riwayat notifikasi in-app dari backend melalui `GET /api/notifications`.
+- Push notification FCM melalui device token yang dikirim ke `POST /api/notifications/device-token`.
+
+Endpoint notifikasi yang digunakan:
+
+```text
+POST   /api/notifications/device-token
+DELETE /api/notifications/device-token
+GET    /api/notifications
+PATCH  /api/notifications/:id/read
+PATCH  /api/notifications/read-all
+```
+
+Untuk push notification Android, tambahkan file konfigurasi Firebase:
+
+```text
+android/app/google-services.json
+```
+
+Untuk iOS, tambahkan:
+
+```text
+ios/Runner/GoogleService-Info.plist
+```
+
+Jika konfigurasi Firebase belum ada, aplikasi tetap bisa berjalan dan halaman notifikasi in-app tetap bisa mengambil data dari backend, tetapi FCM device token tidak akan terdaftar.
+
 ## Cara Menjalankan
 
 1. Pastikan Flutter sudah terpasang.

@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:telemedicine/app_routes.dart';
 import 'package:telemedicine/services/api_service.dart';
+import 'package:telemedicine/services/notification_service.dart';
 import 'package:telemedicine/services/session_manager.dart';
 import 'package:telemedicine/widgets/bottom_navbar.dart';
+import 'package:telemedicine/widgets/notification_bell.dart';
 import 'package:telemedicine/widgets/profile_avatar.dart';
 
 class ProfileSayaPage extends StatefulWidget {
@@ -145,12 +147,7 @@ class _ProfileSayaPageState extends State<ProfileSayaPage> {
             fontWeight: FontWeight.bold,
           ),
         ),
-        actions: [
-          IconButton(
-            onPressed: () {},
-            icon: const Icon(Icons.notifications_none, color: Colors.black54),
-          ),
-        ],
+        actions: [const NotificationBell(color: Colors.black54)],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -292,8 +289,12 @@ class _ProfileSayaPageState extends State<ProfileSayaPage> {
                 icon: Icons.logout,
                 title: "Keluar Akun",
                 color: Colors.red,
-                onTap: () {
+                onTap: () async {
+                  await NotificationService.unregisterCurrentDevice();
                   SessionManager.clear();
+                  if (!context.mounted) {
+                    return;
+                  }
                   Navigator.pushNamedAndRemoveUntil(
                     context,
                     AppRoutes.login,

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
+import 'package:telemedicine/models/app_notification.dart';
 import 'package:telemedicine/models/growth_summary.dart';
 import 'package:telemedicine/services/session_manager.dart';
 
@@ -205,6 +206,72 @@ class ApiService {
       '/pemeriksaan/anak/$childId/mobile-growth-summary',
     );
     return GrowthSummary.fromJson(data);
+  }
+
+  static Future<void> registerDeviceToken({
+    required String fcmToken,
+    required String platform,
+  }) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/notifications/device-token'),
+      headers: _headers,
+      body: jsonEncode({'fcm_token': fcmToken, 'platform': platform}),
+    );
+    final data = _decodeMap(response);
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception(data['message'] ?? 'Gagal menyimpan device token');
+    }
+  }
+
+  static Future<void> unregisterDeviceToken(String fcmToken) async {
+    final request = http.Request(
+      'DELETE',
+      Uri.parse('$baseUrl/notifications/device-token'),
+    );
+    request.headers.addAll(_headers);
+    request.body = jsonEncode({'fcm_token': fcmToken});
+
+    final streamedResponse = await request.send();
+    final response = await http.Response.fromStream(streamedResponse);
+    final data = _decodeMap(response);
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception(data['message'] ?? 'Gagal menonaktifkan device token');
+    }
+  }
+
+  static Future<NotificationListResult> notifications({
+    int limit = 30,
+    int offset = 0,
+    bool unreadOnly = false,
+  }) async {
+    final query = Uri(
+      queryParameters: {
+        'limit': '$limit',
+        'offset': '$offset',
+        if (unreadOnly) 'unread_only': 'true',
+      },
+    ).query;
+    final data = await _getMap('/notifications?$query');
+    return NotificationListResult.fromJson(data);
+  }
+
+  static Future<void> markNotificationRead(int id) async {
+    await _patch('/notifications/$id/read');
+  }
+
+  static Future<void> markAllNotificationsRead() async {
+    await _patch('/notifications/read-all');
+  }
+
+  static Future<void> _patch(String path) async {
+    final response = await http.patch(
+      Uri.parse('$baseUrl$path'),
+      headers: _headers,
+    );
+    final data = _decodeMap(response);
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception(data['message'] ?? 'Request gagal');
+    }
   }
 
   static Future<Map<String, dynamic>> _getMap(String path) async {
