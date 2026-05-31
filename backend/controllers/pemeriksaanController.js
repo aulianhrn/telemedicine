@@ -1,4 +1,5 @@
 const pool = require('../config/db');
+const firestore = require('../config/firebase');
 
 function normalizePemeriksaan(row) {
   return {
@@ -57,6 +58,8 @@ async function createPemeriksaan(req, res, next) {
     const notes = req.body.notes ?? req.body.catatan;
     const additionalData = objectValue(req.body.additional_data ?? req.body.data_tambahan);
     const dynamicData = objectValue(req.body.dynamic_data ?? req.body.data_dinamis);
+    const zScoreData = objectValue(req.body.z_score);
+    const formVersion = req.body.form_version || 'v1';
 
     const targetBidanId = req.user.role === 'bidan' ? req.user.bidanId : bidanId;
 
@@ -69,7 +72,7 @@ async function createPemeriksaan(req, res, next) {
     const [result] = await pool.query(
       `INSERT INTO pemeriksaan
        (anak_id, bidan_id, berat_badan, tinggi_badan, lingkar_kepala, status_gizi, tanggal_pemeriksaan, catatan)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         childId,
         targetBidanId,
@@ -78,52 +81,83 @@ async function createPemeriksaan(req, res, next) {
         headCircumference ?? null,
         nutritionStatus || null,
         examinationDate,
-        null,
+        notes || null,
       ]
     );
 
+    const pemeriksaanId = result.insertId;
+    const normalizedHeadCircumference = headCircumference == null ? null : Number(headCircumference);
+
     const medicalRecord = {
       child_id: Number(childId),
+      examination_id: Number(pemeriksaanId),
+      bidan_id: Number(targetBidanId),
       visit_date: examinationDate,
       notes: notes || '',
       additional_data: {
         ...additionalData,
-        ...(headCircumference == null ? {} : { head_circumference: Number(headCircumference) }),
+        head_circumference: normalizedHeadCircumference,
       },
+      created_at: new Date(),
     };
+
     const growthChartRecord = {
       child_id: Number(childId),
+      examination_id: Number(pemeriksaanId),
       records: [
         {
           month: monthLabel(examinationDate),
+          date: examinationDate,
           weight: Number(weight),
           height: Number(height),
-          ...(headCircumference == null ? {} : { head_circumference: Number(headCircumference) }),
+          head_circumference: normalizedHeadCircumference,
+          z_score: zScoreData,
         },
       ],
+      created_at: new Date(),
     };
 
-    return res.status(201).json({
-      id: result.insertId,
+    const dynamicExamination = {
       child_id: Number(childId),
+      examination_id: Number(pemeriksaanId),
+      bidan_id: Number(targetBidanId),
+      exam_type: dynamicData.exam_type || 'tambahan',
+      form_version: formVersion,
+      data: dynamicData.data || dynamicData,
+      created_at: new Date(),
+    };
+
+    const [medicalRecordRef, growthChartRef, dynamicExaminationRef] = await Promise.all([
+      firestore.collection('medical_records').add(medicalRecord),
+      firestore.collection('growth_charts').add(growthChartRecord),
+      firestore.collection('dynamic_examinations').add(dynamicExamination),
+    ]);
+
+    return res.status(201).json({
+      id: pemeriksaanId,
+      child_id: Number(childId),
+      bidan_id: Number(targetBidanId),
       weight: Number(weight),
       height: Number(height),
-      head_circumference: headCircumference == null ? null : Number(headCircumference),
+      head_circumference: normalizedHeadCircumference,
       examination_date: examinationDate,
       nutrition_status: nutritionStatus || null,
-      sql_table: 'examinations',
+      sql_table: 'pemeriksaan',
       nosql: {
-        medical_records: medicalRecord,
-        growth_charts: growthChartRecord,
-        ...(Object.keys(dynamicData).length > 0 ? {
-          dynamic_examinations: {
-            child_id: Number(childId),
-            exam_type: dynamicData.exam_type || 'tambahan',
-            data: dynamicData.data || dynamicData,
-          },
-        } : {}),
+        medical_records: {
+          firestore_id: medicalRecordRef.id,
+          ...medicalRecord,
+        },
+        growth_charts: {
+          firestore_id: growthChartRef.id,
+          ...growthChartRecord,
+        },
+        dynamic_examinations: {
+          firestore_id: dynamicExaminationRef.id,
+          ...dynamicExamination,
+        },
       },
-      message: 'Pemeriksaan utama tersimpan ke SQL. Catatan fleksibel disiapkan untuk NoSQL.',
+      message: 'Pemeriksaan berhasil ditambahkan ke MySQL dan Firestore',
     });
   } catch (error) {
     return next(error);
