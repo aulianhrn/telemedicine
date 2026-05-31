@@ -101,6 +101,19 @@ async function createPemeriksaan(req, res, next) {
       created_at: new Date(),
     };
 
+    const visitNote = {
+      child_id: Number(childId),
+      examination_id: Number(pemeriksaanId),
+      bidan_id: Number(targetBidanId),
+      visit_date: examinationDate,
+      summary: notes || '',
+      complaints: additionalData.keluhan || null,
+      allergies: Array.isArray(additionalData.alergi) ? additionalData.alergi : [],
+      disease_history: additionalData.riwayat_penyakit || null,
+      midwife_advice: additionalData.saran_bidan || null,
+      created_at: new Date(),
+    };
+
     const growthChartRecord = {
       child_id: Number(childId),
       examination_id: Number(pemeriksaanId),
@@ -117,6 +130,17 @@ async function createPemeriksaan(req, res, next) {
       created_at: new Date(),
     };
 
+    const examinationForm = {
+      child_id: Number(childId),
+      examination_id: Number(pemeriksaanId),
+      form_version: formVersion,
+      form_type: dynamicData.exam_type || 'tambahan',
+      field_keys: Object.keys(dynamicData.data || dynamicData),
+      supports_dynamic_fields: true,
+      source: 'pemeriksaan',
+      created_at: new Date(),
+    };
+
     const dynamicExamination = {
       child_id: Number(childId),
       examination_id: Number(pemeriksaanId),
@@ -127,10 +151,18 @@ async function createPemeriksaan(req, res, next) {
       created_at: new Date(),
     };
 
-    const [medicalRecordRef, growthChartRef, dynamicExaminationRef] = await Promise.all([
+    const [
+      medicalRecordRef,
+      growthChartRef,
+      visitNoteRef,
+      dynamicExaminationRef,
+      examinationFormRef,
+    ] = await Promise.all([
       firestore.collection('medical_records').add(medicalRecord),
       firestore.collection('growth_charts').add(growthChartRecord),
+      firestore.collection('visit_notes').add(visitNote),
       firestore.collection('dynamic_examinations').add(dynamicExamination),
+      firestore.collection('examination_forms').add(examinationForm),
     ]);
 
     return res.status(201).json({
@@ -152,12 +184,20 @@ async function createPemeriksaan(req, res, next) {
           firestore_id: growthChartRef.id,
           ...growthChartRecord,
         },
+        visit_notes: {
+          firestore_id: visitNoteRef.id,
+          ...visitNote,
+        },
         dynamic_examinations: {
           firestore_id: dynamicExaminationRef.id,
           ...dynamicExamination,
         },
+        examination_forms: {
+          firestore_id: examinationFormRef.id,
+          ...examinationForm,
+        },
       },
-      message: 'Pemeriksaan berhasil ditambahkan ke MySQL dan Firestore',
+      message: 'Pemeriksaan berhasil ditambahkan ke MySQL dan 5 collection Firestore',
     });
   } catch (error) {
     return next(error);
