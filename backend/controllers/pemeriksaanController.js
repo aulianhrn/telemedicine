@@ -93,6 +93,7 @@ async function createPemeriksaan(req, res, next) {
       examination_id: Number(pemeriksaanId),
       bidan_id: Number(targetBidanId),
       visit_date: examinationDate,
+      nutrition_status: nutritionStatus || null,
       notes: notes || '',
       additional_data: {
         ...additionalData,
@@ -124,6 +125,7 @@ async function createPemeriksaan(req, res, next) {
           weight: Number(weight),
           height: Number(height),
           head_circumference: normalizedHeadCircumference,
+          nutrition_status: nutritionStatus || null,
           z_score: zScoreData,
         },
       ],
@@ -204,8 +206,217 @@ async function createPemeriksaan(req, res, next) {
   }
 }
 
+async function getWeightChart(req, res, next) {
+  try {
+    const childId = req.params.childId || req.params.anakId || req.query.child_id || req.query.anak_id;
+
+    if (!childId) {
+      return res.status(400).json({ message: 'child_id wajib diisi' });
+    }
+
+    await ensureChildAccess(req, childId);
+    const points = await getGrowthChartPoints(childId);
+
+    return res.json({
+      child_id: Number(childId),
+      title: 'Grafik Berat Badan',
+      unit: 'kg',
+      data: points.map((point) => ({
+        examination_id: point.examination_id,
+        date: point.date,
+        month: point.month,
+        value: point.weight,
+        weight: point.weight,
+      })),
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function getHeightChart(req, res, next) {
+  try {
+    const childId = req.params.childId || req.params.anakId || req.query.child_id || req.query.anak_id;
+
+    if (!childId) {
+      return res.status(400).json({ message: 'child_id wajib diisi' });
+    }
+
+    await ensureChildAccess(req, childId);
+    const points = await getGrowthChartPoints(childId);
+
+    return res.json({
+      child_id: Number(childId),
+      title: 'Grafik Tinggi Badan',
+      unit: 'cm',
+      data: points.map((point) => ({
+        examination_id: point.examination_id,
+        date: point.date,
+        month: point.month,
+        value: point.height,
+        height: point.height,
+      })),
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function getNutritionStatusCard(req, res, next) {
+  try {
+    const childId = req.params.childId || req.params.anakId || req.query.child_id || req.query.anak_id;
+
+    if (!childId) {
+      return res.status(400).json({ message: 'child_id wajib diisi' });
+    }
+
+    await ensureChildAccess(req, childId);
+    const points = await getGrowthChartPoints(childId);
+    const latest = points[points.length - 1] || null;
+
+    return res.json({
+      child_id: Number(childId),
+      title: 'Status Gizi dan Z-Score',
+      data: latest ? nutritionCardFromPoint(latest) : null,
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function getMobileGrowthSummary(req, res, next) {
+  try {
+    const childId = req.params.childId || req.params.anakId || req.query.child_id || req.query.anak_id;
+
+    if (!childId) {
+      return res.status(400).json({ message: 'child_id wajib diisi' });
+    }
+
+    await ensureChildAccess(req, childId);
+    const points = await getGrowthChartPoints(childId);
+    const latest = points[points.length - 1] || null;
+
+    return res.json({
+      child_id: Number(childId),
+      weight_chart: {
+        title: 'Grafik Berat Badan',
+        unit: 'kg',
+        data: points.map((point) => ({
+          examination_id: point.examination_id,
+          date: point.date,
+          month: point.month,
+          value: point.weight,
+          weight: point.weight,
+        })),
+      },
+      height_chart: {
+        title: 'Grafik Tinggi Badan',
+        unit: 'cm',
+        data: points.map((point) => ({
+          examination_id: point.examination_id,
+          date: point.date,
+          month: point.month,
+          value: point.height,
+          height: point.height,
+        })),
+      },
+      nutrition_status_card: {
+        title: 'Status Gizi dan Z-Score',
+        data: latest ? nutritionCardFromPoint(latest) : null,
+      },
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
 function objectValue(value) {
   return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+}
+
+async function ensureChildAccess(req, childId) {
+  if (req.user.role !== 'ibu' || !req.user.ibuId) {
+    return;
+  }
+
+  const [rows] = await pool.query(
+    'SELECT id FROM anak WHERE id = ? AND ibu_id = ? LIMIT 1',
+    [childId, req.user.ibuId]
+  );
+
+  if (rows.length === 0) {
+    const error = new Error('Anak tidak ditemukan atau tidak dapat diakses');
+    error.status = 403;
+    throw error;
+  }
+}
+
+async function getGrowthChartPoints(childId) {
+  const snapshot = await firestore
+    .collection('growth_charts')
+    .where('child_id', '==', Number(childId))
+    .get();
+
+  const points = [];
+
+  snapshot.forEach((doc) => {
+    const data = doc.data();
+    const records = Array.isArray(data.records) ? data.records : [];
+
+    records.forEach((record) => {
+      points.push({
+        firestore_id: doc.id,
+        examination_id: data.examination_id || record.examination_id || null,
+        date: normalizeDate(record.date || data.date || data.created_at),
+        month: record.month || monthLabel(record.date || data.created_at),
+        weight: numberOrNull(record.weight),
+        height: numberOrNull(record.height),
+        head_circumference: numberOrNull(record.head_circumference),
+        nutrition_status: record.nutrition_status || data.nutrition_status || null,
+        z_score: objectValue(record.z_score || data.z_score),
+      });
+    });
+  });
+
+  return points.sort((a, b) => dateSortValue(a.date) - dateSortValue(b.date));
+}
+
+function nutritionCardFromPoint(point) {
+  return {
+    examination_id: point.examination_id,
+    date: point.date,
+    month: point.month,
+    nutrition_status: point.nutrition_status,
+    z_score: point.z_score,
+    weight: point.weight,
+    height: point.height,
+    head_circumference: point.head_circumference,
+  };
+}
+
+function normalizeDate(value) {
+  if (!value) {
+    return null;
+  }
+
+  if (typeof value.toDate === 'function') {
+    return value.toDate().toISOString().slice(0, 10);
+  }
+
+  if (value instanceof Date) {
+    return value.toISOString().slice(0, 10);
+  }
+
+  return String(value);
+}
+
+function dateSortValue(value) {
+  const time = new Date(value).getTime();
+  return Number.isNaN(time) ? 0 : time;
+}
+
+function numberOrNull(value) {
+  return value == null ? null : Number(value);
 }
 
 function monthLabel(value) {
@@ -218,4 +429,11 @@ function monthLabel(value) {
   return months[date.getMonth()];
 }
 
-module.exports = { listPemeriksaan, createPemeriksaan };
+module.exports = {
+  listPemeriksaan,
+  createPemeriksaan,
+  getWeightChart,
+  getHeightChart,
+  getNutritionStatusCard,
+  getMobileGrowthSummary,
+};
