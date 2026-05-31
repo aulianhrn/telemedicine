@@ -31,9 +31,6 @@ class BottomNavbar extends StatelessWidget {
   Widget build(BuildContext context) {
     return BottomNavigationBar(
       currentIndex: currentIndex,
-      type: BottomNavigationBarType.fixed,
-      selectedItemColor: const Color(0xFF006E2F),
-      unselectedItemColor: Colors.grey,
       onTap: (index) => _openTab(context, index),
       items: const [
         BottomNavigationBarItem(icon: Icon(Icons.home), label: "Beranda"),

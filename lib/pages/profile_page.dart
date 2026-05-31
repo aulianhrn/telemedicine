@@ -276,35 +276,31 @@ class _ProfileSayaPageState extends State<ProfileSayaPage> {
                 ],
               ),
             ),
-            const SizedBox(height: 30),
-            InkWell(
-              onTap: () {
-                SessionManager.clear();
-                Navigator.pushNamedAndRemoveUntil(
-                  context,
-                  AppRoutes.login,
-                  (route) => false,
-                );
-              },
-              borderRadius: BorderRadius.circular(16),
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: const [
-                    Icon(Icons.logout, color: Colors.red),
-                    SizedBox(width: 8),
-                    Text(
-                      "Keluar Akun",
-                      style: TextStyle(
-                        color: Colors.red,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
+            const SizedBox(height: 18),
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(18),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.03),
+                    blurRadius: 10,
+                  ),
+                ],
+              ),
+              child: menuItem(
+                icon: Icons.logout,
+                title: "Keluar Akun",
+                color: Colors.red,
+                onTap: () {
+                  SessionManager.clear();
+                  Navigator.pushNamedAndRemoveUntil(
+                    context,
+                    AppRoutes.login,
+                    (route) => false,
+                  );
+                },
+                showChevron: false,
               ),
             ),
             const SizedBox(height: 20),
@@ -373,6 +369,7 @@ class _ProfileSayaPageState extends State<ProfileSayaPage> {
     required String title,
     required Color color,
     required VoidCallback onTap,
+    bool showChevron = true,
   }) {
     return InkWell(
       onTap: onTap,
@@ -400,7 +397,8 @@ class _ProfileSayaPageState extends State<ProfileSayaPage> {
                 ),
               ),
             ),
-            const Icon(Icons.chevron_right, color: Colors.grey),
+            if (showChevron)
+              const Icon(Icons.chevron_right, color: Colors.grey),
           ],
         ),
       ),

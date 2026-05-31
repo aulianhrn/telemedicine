@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:telemedicine/services/session_manager.dart';
+import 'package:telemedicine/theme/app_colors.dart';
 
 class ProfileAvatar extends StatelessWidget {
   final double radius;
@@ -8,7 +9,7 @@ class ProfileAvatar extends StatelessWidget {
   const ProfileAvatar({
     super.key,
     this.radius = 20,
-    this.backgroundColor = const Color(0xFFE5EEFF),
+    this.backgroundColor = AppColors.primarySoft,
   });
 
   @override
@@ -101,7 +102,7 @@ class _FallbackAvatar extends StatelessWidget {
     return CircleAvatar(
       radius: radius,
       backgroundColor: backgroundColor,
-      child: Icon(Icons.person, color: const Color(0xFF006E2F), size: radius),
+      child: Icon(Icons.person, color: AppColors.primary, size: radius),
     );
   }
 }

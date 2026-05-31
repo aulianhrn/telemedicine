@@ -294,14 +294,6 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FF),
 
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: const Color(0xFF006E2F),
-        onPressed: () {
-          Navigator.pushNamed(context, AppRoutes.childProfile);
-        },
-        child: const Icon(Icons.add, color: Colors.white),
-      ),
-
       bottomNavigationBar: widget.showBottomNavbar
           ? const BottomNavbar(currentIndex: 0)
           : null,

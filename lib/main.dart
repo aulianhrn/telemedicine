@@ -4,6 +4,7 @@ import 'package:telemedicine/pages/child_profile_page.dart';
 import 'package:telemedicine/pages/login_page.dart';
 import 'package:telemedicine/pages/main_navigation_page.dart';
 import 'package:telemedicine/pages/register_page.dart';
+import 'package:telemedicine/theme/app_theme.dart';
 
 void main() {
   runApp(const MyApp());
@@ -17,10 +18,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Posyandu Kita',
-      theme: ThemeData(
-        primarySwatch: Colors.green,
-        fontFamily: 'PlusJakartaSans',
-      ),
+      theme: AppTheme.light,
       initialRoute: AppRoutes.login,
       routes: {
         AppRoutes.login: (_) => const LoginPage(),
