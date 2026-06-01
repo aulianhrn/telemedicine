@@ -98,37 +98,14 @@ window.togglePasswordVisibility = function () {
 
 async function doLogin(e) {
     e.preventDefault();
-    const email = document.getElementById('loginEmail').value.trim();
-    const password = document.getElementById('loginPasswordInput').value;
-    const errEl = document.getElementById('loginError');
-    const btn = document.getElementById('loginBtn');
-
-    errEl.classList.add('hidden');
-    btn.disabled = true;
-    btn.textContent = 'Memuat...';
-
-    try {
-        const res = await fetch(BASE_URL + '/auth/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password })
-        });
-        const data = await res.json();
-        if (data.success) {
-            localStorage.setItem('pos_token', data.data.token);
-            localStorage.setItem('pos_user', JSON.stringify(data.data.user));
-            showLoggedInUI();
-        } else {
-            errEl.textContent = data.message || 'Email atau password salah.';
-            errEl.classList.remove('hidden');
-        }
-    } catch {
-        errEl.textContent = 'Tidak bisa terhubung ke server. Pastikan backend berjalan di localhost:5000';
-        errEl.classList.remove('hidden');
-    }
-
-    btn.disabled = false;
-    btn.textContent = 'Masuk';
+    // TEMPORARY - hapus setelah backend berhasil konek
+    localStorage.setItem('pos_token', 'dummy_token');
+    localStorage.setItem('pos_user', JSON.stringify({
+        nama: 'Bidan Sari',
+        email: 'bidan@posyandu.com',
+        role: 'bidan'
+    }));
+    showLoggedInUI();
 }
 
 function renderLoginPage() {
