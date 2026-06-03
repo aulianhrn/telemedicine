@@ -1,0 +1,14 @@
+steps:
+  - name: 'gcr.io/cloud-builders/gcloud'
+    dir: 'frontend-web'
+    entrypoint: 'bash'
+    args:
+      [
+        '-c',
+        'gcloud app deploy app.yaml --quiet',
+      ]
+
+timeout: '1600s'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
