@@ -28,9 +28,14 @@ steps:
         '--port',
         '8080',
         '--allow-unauthenticated',
+        '--add-cloudsql-instances',
+        '$_CLOUD_SQL_INSTANCE',
         '--set-env-vars',
-        'DB_HOST=34.42.191.35,DB_PORT=3306,DB_USER=telemed,DB_PASSWORD=Telemed123!,DB_NAME=telemedicine_posyandu,DB_SSL=true,JWT_SECRET=ganti_dengan_secret_yang_panjang'
+        'DB_SOCKET_PATH=/cloudsql/$_CLOUD_SQL_INSTANCE,DB_PORT=3306,DB_USER=telemed,DB_PASSWORD=Telemed123!,DB_NAME=telemedicine_posyandu,DB_SSL=false,JWT_SECRET=ganti_dengan_secret_yang_panjang,GCS_BUCKET_NAME=telemedicine-posyandu-avatar'
       ]
+
+substitutions:
+  _CLOUD_SQL_INSTANCE: 'praktikum-tcc01:us-central1:mysql-posyandu'
 
 options:
   logging: CLOUD_LOGGING_ONLY

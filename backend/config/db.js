@@ -1,8 +1,5 @@
 const mysql = require('mysql2/promise');
 
-console.log(process.env.DB_USER);
-console.log(process.env.DB_PASSWORD);
-
 const dbConfig = {
   host: process.env.DB_HOST,
   port: Number(process.env.DB_PORT || 3306),
@@ -23,7 +20,7 @@ if (process.env.DB_SOCKET_PATH) {
   delete dbConfig.port;
 }
 
-if (process.env.DB_SSL === 'true') {
+if (process.env.DB_SSL === 'true' && !process.env.DB_SOCKET_PATH) {
   dbConfig.ssl = {
     minVersion: 'TLSv1.2',
     rejectUnauthorized: false,

@@ -4,6 +4,7 @@ const path = require('path');
 const pool = require('../config/db');
 const { hashPassword, verifyPassword } = require('../utils/password');
 const { removeAvatarFileData, saveAvatarFile } = require('../utils/avatarFileStore');
+const { createAvatarPath } = require('../utils/cloudStorage');
 
 function createToken(user) {
   return jwt.sign(
@@ -427,11 +428,10 @@ async function updatePassword(req, res, next) {
 }
 
 async function updateAvatar(req, res, next) {
+  let avatarPath = null;
+
   try {
     if (req.user.role !== 'ibu' || !req.user.ibuId) {
-      if (req.file) {
-        await removeAvatarFile(`/uploads/profile/${req.file.filename}`);
-      }
       return res.status(403).json({ message: 'Foto profil hanya tersedia untuk pengguna ibu' });
     }
 
@@ -439,7 +439,7 @@ async function updateAvatar(req, res, next) {
       return res.status(400).json({ message: 'File ava_pict wajib diunggah' });
     }
 
-    const avatarPath = `/uploads/profile/${req.file.filename}`;
+    avatarPath = createAvatarPath(req.file, 'profile');
     await saveAvatarFile(avatarPath, req.file);
 
     const [rows] = await pool.query(
@@ -465,8 +465,8 @@ async function updateAvatar(req, res, next) {
       ava_pict_url: `${getBaseUrl(req)}${avatarPath}`,
     });
   } catch (error) {
-    if (req.file) {
-      await removeAvatarFile(`/uploads/profile/${req.file.filename}`);
+    if (avatarPath) {
+      await removeAvatarFile(avatarPath);
     }
     return next(error);
   }

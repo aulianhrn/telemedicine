@@ -1,6 +1,7 @@
 const fs = require('fs/promises');
 const path = require('path');
 const pool = require('../config/db');
+const { deleteAvatarFile, downloadAvatarFile, uploadAvatarFile } = require('./cloudStorage');
 
 let tableReady = false;
 const placeholderPng = Buffer.from(
@@ -31,14 +32,16 @@ function normalizeUploadPath(uploadPath) {
 }
 
 async function saveAvatarFile(uploadPath, file) {
-  if (!uploadPath || !file?.path) {
+  if (!uploadPath || !file) {
     return;
   }
+
+  await uploadAvatarFile(uploadPath, file);
 
   try {
     await ensureAvatarFilesTable();
 
-    const data = await fs.readFile(file.path);
+    const data = file.buffer || await fs.readFile(file.path);
     await pool.query(
       `INSERT INTO avatar_files (path, mime_type, data)
        VALUES (?, ?, ?)
@@ -54,6 +57,8 @@ async function removeAvatarFileData(uploadPath) {
   if (!uploadPath) {
     return;
   }
+
+  await deleteAvatarFile(uploadPath);
 
   try {
     await ensureAvatarFilesTable();
@@ -75,6 +80,14 @@ async function serveUploadedFile(req, res, next) {
       if (error.code !== 'ENOENT') {
         throw error;
       }
+    }
+
+    const cloudFile = await downloadAvatarFile(uploadPath);
+
+    if (cloudFile) {
+      res.setHeader('Content-Type', cloudFile.mimeType);
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      return res.send(cloudFile.data);
     }
 
     let rows = [];
