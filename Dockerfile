@@ -9,6 +9,8 @@ COPY . .
 
 RUN echo "=== APP STRUCTURE ===" && find /app | sort
 
+RUN node backend/src/server.js
+
 EXPOSE 5000
 
 CMD ["node", "backend/src/server.js"]
