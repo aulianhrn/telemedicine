@@ -27,7 +27,7 @@ const loginPageHTML = `
                     </div>
                     <div class="relative">
                         <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline">lock</span>
-                        <input type="password" id="loginPasswordInput" class="w-full pl-12 pr-12 py-3 rounded-lg border border-outline-variant bg-surface focus:ring-2 focus:ring-primary-container focus:border-primary outline-none" placeholder="••••••••" value="bidan123">
+                        <input type="password" id="loginPasswordInput" class="w-full pl-12 pr-12 py-3 rounded-lg border border-outline-variant bg-surface focus:ring-2 focus:ring-primary-container focus:border-primary outline-none" placeholder="••••••••" value="pass123">
                         <button type="button" onclick="togglePasswordVisibility()" class="absolute right-4 top-1/2 -translate-y-1/2 text-outline hover:text-on-surface transition-colors">
                             <span id="passwordEyeIcon" class="material-symbols-outlined">visibility</span>
                         </button>
