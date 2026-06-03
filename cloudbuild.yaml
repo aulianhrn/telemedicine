@@ -5,7 +5,7 @@ steps:
     args:
       [
         '-c',
-        'gcloud app deploy app.yaml --quiet',
+        'gcloud app deploy frontend/app.yaml --quiet',
       ]
 
 timeout: '1600s'
