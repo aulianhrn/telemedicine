@@ -6,9 +6,8 @@ Backend ini adalah API Express.js untuk aplikasi Flutter Posyandu. Sistemnya mem
 
 Aplikasi menangani workflow dasar Posyandu:
 
-- Autentikasi pengguna ibu dan bidan.
-- Profil ibu, termasuk foto avatar.
-- Data anak dan foto profil anak.
+- Autentikasi pengguna ibu .
+- Profil ibu dan data anak.
 - Dashboard ringkasan pertumbuhan dan status anak.
 - Jadwal dan status imunisasi.
 - Pemeriksaan bulanan seperti berat badan, tinggi badan, lingkar kepala, dan status gizi.
@@ -198,7 +197,7 @@ Ada beberapa service account yang terlibat:
   Service agent internal Google. Ini bukan akun yang dipakai langsung oleh kode backend.
 
 - **Firebase service account**  
-  Dipakai Firebase Admin SDK jika backend menggunakan `serviceAccountKey.json` atau `FIREBASE_SERVICE_ACCOUNT_JSON`.
+  Dipakai Firebase Admin SDK.
 
 Runtime service account Cloud Run perlu role:
 
@@ -209,13 +208,11 @@ Storage Object Admin
 
 `Cloud SQL Client` diperlukan agar Cloud Run bisa memakai Cloud SQL Unix socket. `Storage Object Admin` diperlukan agar backend bisa upload, baca, dan hapus avatar di bucket.
 
-Untuk konfigurasi saat ini, runtime service account yang digunakan kemungkinan:
+Untuk konfigurasi saat ini, runtime service account yang digunakan:
 
 ```txt
 255520032221-compute@developer.gserviceaccount.com
 ```
-
-Role `Storage Object Admin` bisa diberikan di level bucket avatar saja. Role `Cloud SQL Client` biasanya diberikan di level project.
 
 ## Environment
 
