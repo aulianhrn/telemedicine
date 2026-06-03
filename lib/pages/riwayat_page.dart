@@ -68,7 +68,7 @@ class RiwayatPage extends StatelessWidget {
             );
           }
 
-          final items = snapshot.data ?? [];
+          final items = _sortByLatestCheckup(snapshot.data ?? []);
           final first = items.isEmpty
               ? null
               : Map<String, dynamic>.from(items.first as Map);
@@ -287,6 +287,35 @@ class RiwayatPage extends StatelessWidget {
     }
 
     return int.tryParse(id?.toString() ?? '');
+  }
+
+  List<dynamic> _sortByLatestCheckup(List<dynamic> items) {
+    final sorted = List<dynamic>.from(items);
+    sorted.sort((a, b) {
+      final dateA = a is Map ? _parseDate(a['tanggal_pemeriksaan']) : null;
+      final dateB = b is Map ? _parseDate(b['tanggal_pemeriksaan']) : null;
+
+      if (dateA == null && dateB == null) {
+        return 0;
+      }
+      if (dateA == null) {
+        return 1;
+      }
+      if (dateB == null) {
+        return -1;
+      }
+
+      return dateB.compareTo(dateA);
+    });
+    return sorted;
+  }
+
+  DateTime? _parseDate(dynamic value) {
+    if (value == null || value.toString().isEmpty) {
+      return null;
+    }
+
+    return DateTime.tryParse(value.toString());
   }
 
   Widget timelineItem({

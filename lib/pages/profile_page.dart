@@ -285,6 +285,48 @@ class _ProfileSayaPageState extends State<ProfileSayaPage> {
                   ),
                 ],
               ),
+              child: Column(
+                children: [
+                  menuItem(
+                    icon: Icons.manage_accounts,
+                    title: "Edit Profil",
+                    color: const Color(0xFF006E2F),
+                    onTap: () async {
+                      await Navigator.pushNamed(context, AppRoutes.editProfile);
+                      if (mounted) {
+                        setState(() {});
+                      }
+                    },
+                  ),
+                  Divider(
+                    height: 1,
+                    thickness: 1,
+                    indent: 76,
+                    color: Colors.grey.shade100,
+                  ),
+                  menuItem(
+                    icon: Icons.lock_reset,
+                    title: "Edit Password",
+                    color: Colors.orange,
+                    onTap: () {
+                      Navigator.pushNamed(context, AppRoutes.editPassword);
+                    },
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 18),
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(18),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.03),
+                    blurRadius: 10,
+                  ),
+                ],
+              ),
               child: menuItem(
                 icon: Icons.logout,
                 title: "Keluar Akun",

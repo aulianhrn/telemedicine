@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:telemedicine/app_routes.dart';
 import 'package:telemedicine/pages/child_profile_page.dart';
+import 'package:telemedicine/pages/edit_password_page.dart';
+import 'package:telemedicine/pages/edit_profile_page.dart';
 import 'package:telemedicine/pages/login_page.dart';
 import 'package:telemedicine/pages/main_navigation_page.dart';
 import 'package:telemedicine/pages/notifications_page.dart';
@@ -28,6 +30,8 @@ class MyApp extends StatelessWidget {
         AppRoutes.imunisasi: (_) => const MainNavigationPage(initialIndex: 1),
         AppRoutes.riwayat: (_) => const MainNavigationPage(initialIndex: 2),
         AppRoutes.profile: (_) => const MainNavigationPage(initialIndex: 3),
+        AppRoutes.editProfile: (_) => const EditProfilIbuPage(),
+        AppRoutes.editPassword: (_) => const EditPasswordPage(),
         AppRoutes.childProfile: (_) => const ProfilePage(),
         AppRoutes.notifications: (_) => const NotificationsPage(),
       },

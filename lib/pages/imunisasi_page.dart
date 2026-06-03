@@ -75,10 +75,27 @@ class _JadwalImunisasiPageState extends State<JadwalImunisasiPage> {
           }
 
           final items = snapshot.data ?? [];
+          final sortedItems = _sortImunisasiByLatestDate(items);
           final nextItems = items
               .where((item) => item is Map && item['status'] == 'pending')
               .cast<Map>()
               .toList();
+          nextItems.sort((a, b) {
+            final dateA = _parseDate(a['tanggal_jadwal']);
+            final dateB = _parseDate(b['tanggal_jadwal']);
+
+            if (dateA == null && dateB == null) {
+              return 0;
+            }
+            if (dateA == null) {
+              return 1;
+            }
+            if (dateB == null) {
+              return -1;
+            }
+
+            return dateA.compareTo(dateB);
+          });
           final next = nextItems.isNotEmpty ? nextItems.first : null;
 
           return SingleChildScrollView(
@@ -194,27 +211,6 @@ class _JadwalImunisasiPageState extends State<JadwalImunisasiPage> {
                           ),
                         ],
                       ),
-
-                      const SizedBox(height: 20),
-
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            foregroundColor: const Color(0xFF006E2F),
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                          ),
-                          onPressed: () {},
-                          child: const Text(
-                            "Lihat Detail Lokasi",
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                      ),
                     ],
                   ),
                 ),
@@ -222,26 +218,13 @@ class _JadwalImunisasiPageState extends State<JadwalImunisasiPage> {
                 const SizedBox(height: 24),
 
                 // ================= VAKSIN LIST =================
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: const [
-                    Text(
-                      "RIWAYAT & DAFTAR VAKSIN",
-                      style: TextStyle(
-                        color: Colors.blue,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                      ),
-                    ),
-
-                    Text(
-                      "Lihat Semua",
-                      style: TextStyle(
-                        color: Colors.green,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
+                const Text(
+                  "RIWAYAT & DAFTAR VAKSIN",
+                  style: TextStyle(
+                    color: Colors.blue,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
                 ),
 
                 const SizedBox(height: 14),
@@ -257,7 +240,7 @@ class _JadwalImunisasiPageState extends State<JadwalImunisasiPage> {
                     child: const Text("Belum ada data imunisasi."),
                   )
                 else
-                  ...items.map((item) {
+                  ...sortedItems.map((item) {
                     final data = Map<String, dynamic>.from(item as Map);
                     final done = data['status'] == 'selesai';
                     return vaksinItem(
@@ -451,6 +434,36 @@ class _JadwalImunisasiPageState extends State<JadwalImunisasiPage> {
         _visibleMonth.month + offset,
       );
     });
+  }
+
+  List<dynamic> _sortImunisasiByLatestDate(List<dynamic> items) {
+    final sorted = List<dynamic>.from(items);
+    sorted.sort((a, b) {
+      final dateA = a is Map ? _imunisasiDisplayDate(a) : null;
+      final dateB = b is Map ? _imunisasiDisplayDate(b) : null;
+
+      if (dateA == null && dateB == null) {
+        return 0;
+      }
+      if (dateA == null) {
+        return 1;
+      }
+      if (dateB == null) {
+        return -1;
+      }
+
+      return dateB.compareTo(dateA);
+    });
+    return sorted;
+  }
+
+  DateTime? _imunisasiDisplayDate(Map item) {
+    final done = item['status'] == 'selesai';
+    return _parseDate(
+      done
+          ? item['tanggal_imunisasi'] ?? item['tanggal_jadwal']
+          : item['tanggal_jadwal'] ?? item['tanggal_imunisasi'],
+    );
   }
 
   Map<String, String> _markedDates(List<dynamic> items) {

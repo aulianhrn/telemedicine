@@ -110,6 +110,41 @@ class ApiService {
     return data;
   }
 
+  static Future<Map<String, dynamic>> updateIbuProfile({
+    required String nama,
+    required String email,
+    required String nik,
+    String? noHp,
+    String? alamat,
+    String? tanggalLahir,
+  }) async {
+    final data = await _patchMap('/auth/me', {
+      'nama': nama,
+      'email': email,
+      'nik': nik,
+      'no_hp': noHp,
+      'alamat': alamat,
+      'tanggal_lahir': tanggalLahir,
+    });
+
+    final user = _extractUser(data);
+    if (user != null) {
+      SessionManager.updateUser(_normalizeUserAvatar(user));
+    }
+
+    return data;
+  }
+
+  static Future<Map<String, dynamic>> updatePassword({
+    required String oldPassword,
+    required String newPassword,
+  }) {
+    return _patchMap('/auth/me/password', {
+      'old_password': oldPassword,
+      'new_password': newPassword,
+    });
+  }
+
   static Future<Map<String, dynamic>> uploadProfileAvatar({
     required Uint8List photoBytes,
     required String fileName,
@@ -272,6 +307,22 @@ class ApiService {
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw Exception(data['message'] ?? 'Request gagal');
     }
+  }
+
+  static Future<Map<String, dynamic>> _patchMap(
+    String path,
+    Map<String, dynamic> body,
+  ) async {
+    final response = await http.patch(
+      Uri.parse('$baseUrl$path'),
+      headers: _headers,
+      body: jsonEncode(body),
+    );
+    final data = _decodeMap(response);
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception(data['message'] ?? 'Request gagal');
+    }
+    return data;
   }
 
   static Future<Map<String, dynamic>> _getMap(String path) async {
