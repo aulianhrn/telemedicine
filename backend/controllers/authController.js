@@ -33,6 +33,26 @@ function withAvatarUrl(user, req) {
   };
 }
 
+function normalizeEmpty(value) {
+  return value === '' ? null : value;
+}
+
+async function getUserProfile(userId) {
+  const [rows] = await pool.query(
+    `SELECT p.id, p.nama, p.email, p.role, p.no_hp,
+            i.id AS ibu_id, i.nik, i.alamat, i.tanggal_lahir AS tanggal_lahir_ibu, i.ava_pict,
+            b.id AS bidan_id, b.nomor_str, b.tempat_kerja
+     FROM pengguna p
+     LEFT JOIN ibu i ON i.pengguna_id = p.id
+     LEFT JOIN bidan b ON b.pengguna_id = p.id
+     WHERE p.id = ?
+     LIMIT 1`,
+    [userId]
+  );
+
+  return rows[0] || null;
+}
+
 async function removeAvatarFile(avatarPath) {
   if (!avatarPath) {
     return;
@@ -212,15 +232,174 @@ async function register(req, res, next) {
 
 async function me(req, res, next) {
   try {
+    const user = await getUserProfile(req.user.id);
+
+    if (!user) {
+      return res.status(404).json({ message: 'Pengguna tidak ditemukan' });
+    }
+
+    return res.json(withAvatarUrl(user, req));
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function updateIbuProfile(req, res, next) {
+  let connection;
+
+  try {
+    if (req.user.role !== 'ibu' || !req.user.ibuId) {
+      return res.status(403).json({ message: 'Edit profil hanya tersedia untuk pengguna ibu' });
+    }
+
+    const allowedFields = ['nama', 'email', 'no_hp', 'nik', 'alamat', 'tanggal_lahir'];
+    const hasUpdate = allowedFields.some((field) => Object.prototype.hasOwnProperty.call(req.body, field));
+
+    if (!hasUpdate) {
+      return res.status(400).json({
+        message: 'Minimal satu field profil wajib diisi',
+        allowed_fields: allowedFields,
+      });
+    }
+
+    const {
+      nama,
+      email,
+      no_hp,
+      nik,
+      alamat,
+      tanggal_lahir,
+    } = req.body;
+
+    if (Object.prototype.hasOwnProperty.call(req.body, 'nama') && !String(nama || '').trim()) {
+      return res.status(400).json({ message: 'Nama tidak boleh kosong' });
+    }
+
+    if (Object.prototype.hasOwnProperty.call(req.body, 'email') && !String(email || '').trim()) {
+      return res.status(400).json({ message: 'Email tidak boleh kosong' });
+    }
+
+    if (Object.prototype.hasOwnProperty.call(req.body, 'nik') && !String(nik || '').trim()) {
+      return res.status(400).json({ message: 'NIK tidak boleh kosong' });
+    }
+
+    connection = await pool.getConnection();
+    await connection.beginTransaction();
+
+    if (email) {
+      const [existingEmail] = await connection.query(
+        'SELECT id FROM pengguna WHERE email = ? AND id <> ? LIMIT 1',
+        [String(email).trim(), req.user.id]
+      );
+
+      if (existingEmail.length > 0) {
+        await connection.rollback();
+        return res.status(409).json({ message: 'Email sudah terdaftar' });
+      }
+    }
+
+    if (nik) {
+      const [existingNik] = await connection.query(
+        'SELECT id FROM ibu WHERE nik = ? AND id <> ? LIMIT 1',
+        [String(nik).trim(), req.user.ibuId]
+      );
+
+      if (existingNik.length > 0) {
+        await connection.rollback();
+        return res.status(409).json({ message: 'NIK sudah terdaftar' });
+      }
+    }
+
+    const penggunaUpdates = [];
+    const penggunaParams = [];
+
+    if (Object.prototype.hasOwnProperty.call(req.body, 'nama')) {
+      penggunaUpdates.push('nama = ?');
+      penggunaParams.push(String(nama).trim());
+    }
+
+    if (Object.prototype.hasOwnProperty.call(req.body, 'email')) {
+      penggunaUpdates.push('email = ?');
+      penggunaParams.push(String(email).trim());
+    }
+
+    if (Object.prototype.hasOwnProperty.call(req.body, 'no_hp')) {
+      penggunaUpdates.push('no_hp = ?');
+      penggunaParams.push(normalizeEmpty(no_hp));
+    }
+
+    if (penggunaUpdates.length > 0) {
+      penggunaParams.push(req.user.id);
+      await connection.query(
+        `UPDATE pengguna SET ${penggunaUpdates.join(', ')} WHERE id = ?`,
+        penggunaParams
+      );
+    }
+
+    const ibuUpdates = [];
+    const ibuParams = [];
+
+    if (Object.prototype.hasOwnProperty.call(req.body, 'nik')) {
+      ibuUpdates.push('nik = ?');
+      ibuParams.push(String(nik).trim());
+    }
+
+    if (Object.prototype.hasOwnProperty.call(req.body, 'alamat')) {
+      ibuUpdates.push('alamat = ?');
+      ibuParams.push(normalizeEmpty(alamat));
+    }
+
+    if (Object.prototype.hasOwnProperty.call(req.body, 'tanggal_lahir')) {
+      ibuUpdates.push('tanggal_lahir = ?');
+      ibuParams.push(normalizeEmpty(tanggal_lahir));
+    }
+
+    if (ibuUpdates.length > 0) {
+      ibuParams.push(req.user.ibuId);
+      await connection.query(
+        `UPDATE ibu SET ${ibuUpdates.join(', ')} WHERE id = ?`,
+        ibuParams
+      );
+    }
+
+    await connection.commit();
+
+    const user = await getUserProfile(req.user.id);
+
+    return res.json({
+      message: 'Profil ibu berhasil diperbarui',
+      user: withAvatarUrl(user, req),
+    });
+  } catch (error) {
+    if (connection) {
+      await connection.rollback();
+    }
+    return next(error);
+  } finally {
+    if (connection) {
+      connection.release();
+    }
+  }
+}
+
+async function updatePassword(req, res, next) {
+  try {
+    const { old_password, current_password, password_lama, new_password, password_baru } = req.body;
+    const currentPassword = old_password || current_password || password_lama;
+    const newPassword = new_password || password_baru;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({
+        message: 'Password lama dan password baru wajib diisi',
+      });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: 'Password baru minimal 6 karakter' });
+    }
+
     const [rows] = await pool.query(
-      `SELECT p.id, p.nama, p.email, p.role, p.no_hp,
-              i.id AS ibu_id, i.nik, i.alamat, i.tanggal_lahir AS tanggal_lahir_ibu, i.ava_pict,
-              b.id AS bidan_id, b.nomor_str, b.tempat_kerja
-       FROM pengguna p
-       LEFT JOIN ibu i ON i.pengguna_id = p.id
-       LEFT JOIN bidan b ON b.pengguna_id = p.id
-       WHERE p.id = ?
-       LIMIT 1`,
+      'SELECT password FROM pengguna WHERE id = ? LIMIT 1',
       [req.user.id]
     );
 
@@ -228,7 +407,20 @@ async function me(req, res, next) {
       return res.status(404).json({ message: 'Pengguna tidak ditemukan' });
     }
 
-    return res.json(withAvatarUrl(rows[0], req));
+    const validPassword = await verifyPassword(currentPassword, rows[0].password);
+
+    if (!validPassword) {
+      return res.status(401).json({ message: 'Password lama salah' });
+    }
+
+    const hashedPassword = await hashPassword(newPassword);
+
+    await pool.query(
+      'UPDATE pengguna SET password = ? WHERE id = ?',
+      [hashedPassword, req.user.id]
+    );
+
+    return res.json({ message: 'Password berhasil diperbarui' });
   } catch (error) {
     return next(error);
   }
@@ -280,4 +472,4 @@ async function updateAvatar(req, res, next) {
   }
 }
 
-module.exports = { login, me, register, updateAvatar };
+module.exports = { login, me, register, updateIbuProfile, updatePassword, updateAvatar };

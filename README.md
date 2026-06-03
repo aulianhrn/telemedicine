@@ -30,6 +30,9 @@ Backend Express.js untuk aplikasi Flutter Posyandu.
 
 - `POST /api/auth/login`
 - `GET /api/auth/me`
+- `PATCH /api/auth/me`
+- `PATCH /api/auth/me/password`
+- `POST /api/auth/me/avatar`
 - `GET /api/dashboard`
 - `GET /api/anak`
 - `POST /api/anak`
