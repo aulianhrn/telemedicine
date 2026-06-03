@@ -1,7 +1,7 @@
 // ===================== CONFIG =====================
-const BASE_URL = 'https://web-telemedicine-255520032221.asia-southeast2.run.app/api';
+const BASE_URL = 'https://backend-web-255520032221.us-central1.run.app/api';
 // Base URL server tanpa /api — untuk build URL foto avatar
-const SERVER_URL = 'https://web-telemedicine-255520032221.asia-southeast2.run.app';
+const SERVER_URL = 'https://backend-web-255520032221.us-central1.run.app';
 
 // ===================== UTILS =====================
 function formatDate(d) {
