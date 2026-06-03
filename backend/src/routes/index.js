@@ -15,6 +15,9 @@ router.get ('/auth/me',               auth, authCtrl.me);
 router.put ('/auth/change-password',  auth, authCtrl.changePassword);
 router.get ('/auth/users',            auth, requireAdmin, authCtrl.listUsers);
 router.post('/auth/users',            auth, requireAdmin, authCtrl.createUser);
+// Upload avatar — multer dipakai langsung dari authCtrl
+router.put ('/auth/avatar',           auth, authCtrl.uploadAvatar.single('avatar'), authCtrl.handleUploadAvatar);
+router.delete('/auth/avatar', auth, authCtrl.deleteAvatar);
 
 // ── DASHBOARD ─────────────────────────────────────────
 router.get('/dashboard', auth, requireBidanOrAdmin, dashCtrl.dashboard);

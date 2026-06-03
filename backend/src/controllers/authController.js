@@ -1,15 +1,40 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const pool = require('../config/db');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 
 function createToken(user) {
-  // Format token IDENTIK dengan temenmu agar saling kompatibel
   return jwt.sign(
     { id: user.id, role: user.role, ibuId: user.ibu_id || null, bidanId: user.bidan_id || null },
     process.env.JWT_SECRET || 'dev_secret',
     { expiresIn: '7d' }
   );
 }
+
+// ── Multer config untuk upload avatar ──
+const avatarStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const dir = 'uploads/avatar';
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    cb(null, `avatar_${req.user.id}_${Date.now()}${path.extname(file.originalname)}`);
+  }
+});
+const avatarFilter = (req, file, cb) => {
+  const allowed = ['.jpg', '.jpeg', '.png', '.webp'];
+  const ext = path.extname(file.originalname).toLowerCase();
+  if (allowed.includes(ext)) cb(null, true);
+  else cb(new Error('Format file tidak didukung. Gunakan JPG atau PNG.'));
+};
+const uploadAvatar = multer({
+  storage: avatarStorage,
+  limits: { fileSize: 2 * 1024 * 1024 },
+  fileFilter: avatarFilter,
+});
 
 // POST /api/auth/login
 async function login(req, res, next) {
@@ -18,7 +43,7 @@ async function login(req, res, next) {
     if (!email || !password) return res.status(400).json({ success: false, message: 'Email dan password wajib diisi.' });
 
     const [rows] = await pool.query(
-      `SELECT p.id, p.nama, p.email, p.password, p.role, p.no_hp,
+      `SELECT p.id, p.nama, p.email, p.password, p.role, p.no_hp, p.avatar,
               i.id AS ibu_id,
               b.id AS bidan_id, b.nomor_str, b.tempat_kerja
        FROM pengguna p
@@ -31,7 +56,6 @@ async function login(req, res, next) {
     const user = rows[0];
     if (!user) return res.status(401).json({ success: false, message: 'Email atau password salah.' });
 
-    // Hanya admin & bidan boleh login web
     if (!['admin', 'bidan'].includes(user.role)) {
       return res.status(403).json({ success: false, message: 'Akses ditolak. Gunakan aplikasi mobile.' });
     }
@@ -54,7 +78,7 @@ async function login(req, res, next) {
 async function me(req, res, next) {
   try {
     const [rows] = await pool.query(
-      `SELECT p.id, p.nama, p.email, p.role, p.no_hp,
+      `SELECT p.id, p.nama, p.email, p.role, p.no_hp, p.avatar,
               b.id AS bidan_id, b.nomor_str, b.tempat_kerja
        FROM pengguna p
        LEFT JOIN bidan b ON b.pengguna_id = p.id
@@ -81,6 +105,40 @@ async function changePassword(req, res, next) {
 
     await pool.query('UPDATE pengguna SET password = ? WHERE id = ?', [await bcrypt.hash(password_baru, 10), req.user.id]);
     return res.json({ success: true, message: 'Password berhasil diubah.' });
+  } catch (err) { return next(err); }
+}
+
+// PUT /api/auth/avatar — upload foto profil
+async function handleUploadAvatar(req, res, next) {
+  try {
+    if (!req.file) return res.status(400).json({ success: false, message: 'File tidak ditemukan.' });
+
+    // Hapus avatar lama jika ada
+    const [rows] = await pool.query('SELECT avatar FROM pengguna WHERE id = ?', [req.user.id]);
+    const oldAvatar = rows[0]?.avatar;
+    if (oldAvatar) {
+      const oldPath = path.join(__dirname, '..', oldAvatar);
+      if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+    }
+
+    const avatarUrl = `/uploads/avatar/${req.file.filename}`;
+    await pool.query('UPDATE pengguna SET avatar = ? WHERE id = ?', [avatarUrl, req.user.id]);
+
+    return res.json({ success: true, avatar: avatarUrl });
+  } catch (err) { return next(err); }
+}
+
+// DELETE /api/auth/avatar — hapus foto profil
+async function deleteAvatar(req, res, next) {
+  try {
+    const [rows] = await pool.query('SELECT avatar FROM pengguna WHERE id = ?', [req.user.id]);
+    const oldAvatar = rows[0]?.avatar;
+    if (oldAvatar) {
+      const oldPath = path.join(__dirname, '..', oldAvatar);
+      if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+    }
+    await pool.query('UPDATE pengguna SET avatar = NULL WHERE id = ?', [req.user.id]);
+    return res.json({ success: true, message: 'Foto profil berhasil dihapus.' });
   } catch (err) { return next(err); }
 }
 
@@ -122,4 +180,4 @@ async function createUser(req, res, next) {
   } catch (err) { return next(err); }
 }
 
-module.exports = { login, me, changePassword, listUsers, createUser };
+module.exports = { login, me, changePassword, listUsers, createUser, uploadAvatar, handleUploadAvatar, deleteAvatar };

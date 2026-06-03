@@ -70,7 +70,7 @@ async function loadAnakTable() {
                         <td class="p-4 font-medium">${a.nama}
                             <div class="text-xs text-on-surface-variant">${umur(a.tanggal_lahir)}</div>
                         </td>
-                        <td class="p-4 text-sm text-on-surface-variant">${a.ibu?.pengguna?.nama || '—'}</td>
+                        <td class="p-4 text-sm text-on-surface-variant">${a.nama_ibu || '—'}</td>
                         <td class="p-4 text-sm">${formatDate(a.tanggal_lahir)}</td>
                         <td class="p-4">
                             ${a.jenis_kelamin === 'L'
@@ -120,7 +120,8 @@ window.openAnakModal = async function (id = null) {
     const sel = document.getElementById('anakIbuId');
     sel.innerHTML = '<option value="">-- Pilih Ibu --</option>';
     (ibuRes?.data || []).forEach(i => {
-        sel.innerHTML += `<option value="${i.id}">${i.pengguna?.nama || 'Ibu #' + i.id} (NIK: ${i.nik})</option>`;
+        // Backend ibu mengembalikan flat: i.nama (bukan i.pengguna?.nama)
+        sel.innerHTML += `<option value="${i.id}">${i.nama || 'Ibu #' + i.id} (NIK: ${i.nik})</option>`;
     });
 
     if (id) {
@@ -196,7 +197,6 @@ window.openDetailAnak = async function (id) {
         return;
     }
 
-    // Backend sudah sertakan pemeriksaan langsung di GET /anak/:id
     const pemList = anak.pemeriksaan || [];
     const imunList = imunRes?.data || [];
 

@@ -1,5 +1,7 @@
 // ===================== CONFIG =====================
 const BASE_URL = 'https://web-telemedicine-255520032221.asia-southeast2.run.app/api';
+// Base URL server tanpa /api — untuk build URL foto avatar
+const SERVER_URL = 'https://web-telemedicine-255520032221.asia-southeast2.run.app';
 
 // ===================== UTILS =====================
 function formatDate(d) {
@@ -33,6 +35,27 @@ function closeModal(id) {
     if (el) el.style.display = 'none';
     document.body.style.overflow = '';
 }
+
+// ── AVATAR HELPER ──
+// Terapkan foto ke elemen avatar (topbar atau settings)
+function applyAvatarPhoto(el, src) {
+    if (!el || !src) return;
+    el.style.backgroundImage = `url(${src})`;
+    el.style.backgroundSize = 'cover';
+    el.style.backgroundPosition = 'center';
+    el.textContent = '';
+}
+
+// Load avatar dari data user (dari server), dipanggil saat login & init
+window.loadAvatarToTopbar = function () {
+    const user = JSON.parse(localStorage.getItem('pos_user') || '{}');
+    if (user.avatar) {
+        // Avatar tersimpan di server — build full URL
+        const src = user.avatar.startsWith('http') ? user.avatar : SERVER_URL + user.avatar;
+        applyAvatarPhoto(document.getElementById('topbarUserInitials'), src);
+    }
+    // Tidak ada fallback ke base64 lagi — pakai inisial saja jika belum ada foto
+};
 
 // ===================== NAVIGATION =====================
 window.navigateTo = function (page) {
@@ -117,6 +140,7 @@ function showLoggedInUI() {
     document.getElementById('topbarUserName').textContent = user.nama || '—';
     document.getElementById('topbarUserRole').textContent = user.role === 'admin' ? 'Administrator' : 'Bidan';
 
+    // Load avatar dari server (jika ada)
     loadAvatarToTopbar();
 
     document.getElementById('sidebar').classList.remove('hidden');
