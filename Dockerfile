@@ -7,7 +7,7 @@ RUN npm install --production
 
 COPY . .
 
-RUN echo "=== FILES ===" && find /app -name "server.js"
+RUN echo "=== APP STRUCTURE ===" && find /app | sort
 
 EXPOSE 5000
 
