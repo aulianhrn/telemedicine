@@ -17,20 +17,16 @@ steps:
 
   - name: 'gcr.io/cloud-builders/gcloud'
     args:
-      [
-        'run',
-        'deploy',
-        'backend-web',
-        '--image',
-        'gcr.io/$PROJECT_ID/telemedicine-backend-web',
-        '--region',
-        'us-central1',
-        '--port',
-        '5000',
-        '--allow-unauthenticated',
-        '--set-env-vars',
-        'DB_HOST=34.42.191.35,DB_PORT=3306,DB_USER=adminposyandu,DB_PASSWORD=pass123,DB_NAME=telemedicine_posyandu,DB_SSL=true,GCS_BUCKET_NAME=posyandu-avatars,JWT_SECRET=ganti_dengan_secret_yang_panjang,FRONTEND_URL=https://domain-frontend-anda.com'
-      ]
+      - run
+      - deploy
+      - backend-web
+      - --image
+      - gcr.io/$PROJECT_ID/telemedicine-backend-web
+      - --region
+      - us-central1
+      - --allow-unauthenticated
+      - --set-env-vars
+      - DB_HOST=34.42.191.35,DB_PORT=3306,DB_USER=adminposyandu,DB_PASSWORD=pass123,DB_NAME=telemedicine_posyandu,DB_SSL=true,GCS_BUCKET_NAME=posyandu-avatars,JWT_SECRET=ganti_dengan_secret_yang_panjang
 
 options:
   logging: CLOUD_LOGGING_ONLY
