@@ -1,235 +1,247 @@
 # Telemedicine Posyandu Backend
 
-Backend Express.js untuk aplikasi Flutter Posyandu. Backend ini memakai Cloud SQL MySQL untuk data utama, Google Cloud Storage untuk foto avatar, Firebase/Firestore untuk kebutuhan NoSQL, Cloud Build untuk build image, dan Cloud Run untuk menjalankan API. Di Cloud Run, koneksi database disarankan memakai Cloud SQL Unix socket.
+Backend ini adalah API Express.js untuk aplikasi Flutter Posyandu. Sistemnya memakai arsitektur hybrid: data operasional utama disimpan di Cloud SQL MySQL, file avatar disimpan di Google Cloud Storage, dan kebutuhan data fleksibel/mobile disiapkan lewat Firebase/Firestore.
 
-## Struktur Penting
+## Gambaran Aplikasi
 
-- `backend/server.js`: entry point Express.
-- `backend/config/db.js`: koneksi Cloud SQL MySQL.
-- `backend/config/firebase.js`: inisialisasi Firebase Admin / Firestore.
-- `backend/middleware/uploadAvatar.js`: middleware upload avatar memakai memory upload.
-- `backend/utils/cloudStorage.js`: upload, hapus, dan download avatar dari Cloud Storage.
-- `backend/utils/avatarFileStore.js`: serve URL `/uploads/...` dari Cloud Storage, dengan fallback database.
-- `Dockerfile`: image backend untuk Cloud Run.
-- `cloudbuild.yaml`: pipeline Cloud Build untuk build, push, dan deploy Cloud Run.
-- `.env.example`: template konfigurasi lokal.
-- `backend/.env`: konfigurasi lokal aktif, tidak untuk commit.
+Aplikasi menangani workflow dasar Posyandu:
 
-## Setup Lokal
+- Autentikasi pengguna ibu dan bidan.
+- Profil ibu, termasuk foto avatar.
+- Data anak dan foto profil anak.
+- Dashboard ringkasan pertumbuhan dan status anak.
+- Jadwal dan status imunisasi.
+- Pemeriksaan bulanan seperti berat badan, tinggi badan, lingkar kepala, dan status gizi.
+- Notifikasi dan device token untuk kebutuhan mobile.
 
-Masuk ke folder backend aplikasi:
+Backend menyediakan REST API untuk Flutter. Sebagian endpoint berbahasa Indonesia (`/api/imunisasi`, `/api/pemeriksaan`) dan sebagian alias berbahasa Inggris (`/api/immunizations`, `/api/examinations`) disediakan agar kompatibel dengan skenario SQL/NoSQL yang berbeda.
 
-```bash
-cd backend
-npm install
-```
+## Teknologi
 
-Salin template env dari root repo ke folder backend:
+Teknologi utama yang dipakai:
 
-```bash
-copy ..\.env.example .env
-```
+- **Node.js + Express.js** sebagai backend REST API.
+- **MySQL** sebagai database relasional.
+- **Google Cloud SQL** sebagai managed MySQL di GCP.
+- **Google Cloud Run** sebagai runtime container backend.
+- **Google Cloud Build** sebagai pipeline build dan deploy otomatis.
+- **Google Container Registry** (`gcr.io`) sebagai registry image Docker.
+- **Google Cloud Storage** sebagai penyimpanan file avatar.
+- **Firebase Admin SDK** untuk akses Firebase/Firestore dari backend.
+- **Firestore** untuk kebutuhan NoSQL dan data mobile yang lebih fleksibel.
+- **JWT** untuk autentikasi API.
+- **Multer** untuk menerima upload file avatar dari multipart form.
 
-Isi nilai penting:
+## Arsitektur GCP
 
-```env
-PORT=3000
-JWT_SECRET=ganti_dengan_secret_yang_panjang
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_USER=telemed
-DB_PASSWORD=ganti_password_database
-DB_NAME=telemedicine_posyandu
-DB_SSL=false
-DB_SOCKET_PATH=
-GCS_BUCKET_NAME=telemedicine-posyandu-avatar
-```
+Alur deployment backend:
 
-Jalankan:
+1. Source code dipush ke repository yang terhubung dengan Cloud Build Trigger.
+2. Cloud Build membaca `cloudbuild.yaml`.
+3. Docker image dibuat dari `Dockerfile`.
+4. Image dipush ke `gcr.io/$PROJECT_ID/telemedicine-backend`.
+5. Cloud Build menjalankan `gcloud run deploy`.
+6. Cloud Run menjalankan container backend sebagai service bernama `backend`.
 
-```bash
-npm run dev
-```
+File penting:
 
-Health check:
+- `Dockerfile`: definisi image backend.
+- `cloudbuild.yaml`: instruksi build, push, dan deploy Cloud Run.
+- `backend/server.js`: entry point aplikasi Express.
+- `backend/config/db.js`: konfigurasi koneksi MySQL.
+- `backend/config/firebase.js`: konfigurasi Firebase Admin.
+- `backend/utils/cloudStorage.js`: integrasi Google Cloud Storage.
 
-```txt
-GET http://localhost:3000/health
-```
+## Cloud Run
+
+Cloud Run menjalankan backend sebagai container HTTP. Service ini menerima request dari aplikasi Flutter dan meneruskannya ke route Express.
+
+Konfigurasi Cloud Run yang penting:
+
+- Port container: `8080`
+- Service name: `backend`
+- Region di konfigurasi saat ini: `us-central1`
+- Public access: `--allow-unauthenticated`
+- Runtime service account: service account yang dipakai backend saat mengakses Cloud SQL dan Cloud Storage.
+
+Environment variable Cloud Run diset dari `cloudbuild.yaml`, bukan dari file `.env` lokal.
+
+## Cloud Build dan Trigger
+
+Cloud Build dipakai untuk CI/CD. Trigger akan menjalankan deployment otomatis saat ada push ke branch yang dikonfigurasi.
+
+Pipeline di `cloudbuild.yaml` berisi:
+
+- Build image:
+  ```txt
+  docker build -t gcr.io/$PROJECT_ID/telemedicine-backend .
+  ```
+- Push image:
+  ```txt
+  docker push gcr.io/$PROJECT_ID/telemedicine-backend
+  ```
+- Deploy Cloud Run:
+  ```txt
+  gcloud run deploy backend
+  ```
+
+Cloud Build service account berbeda dari runtime service account Cloud Run. Cloud Build service account bertugas membangun dan mendeploy image, sedangkan runtime service account dipakai aplikasi saat berjalan.
 
 ## Cloud SQL MySQL
 
-Database utama aplikasi berada di Cloud SQL MySQL. Untuk Cloud Run, backend dikonfigurasi memakai Cloud SQL Unix socket supaya database tidak perlu diakses lewat public IP.
+Cloud SQL MySQL menyimpan data utama aplikasi, seperti:
 
-Format Cloud SQL instance connection name:
+- `pengguna`
+- `ibu`
+- `bidan`
+- `anak`
+- `imunisasi`
+- `pemeriksaan`
+- path avatar
+- data notifikasi/device token jika ada di skema SQL
+
+Di Cloud Run, backend dikonfigurasi memakai **Cloud SQL Unix socket**. Dengan cara ini backend tidak perlu mengakses database lewat public IP.
+
+Format instance connection name:
 
 ```txt
 PROJECT_ID:REGION:INSTANCE_ID
 ```
 
-Contoh:
+Di `cloudbuild.yaml`, nilai ini diwakili oleh substitution:
 
-```txt
-praktikum-tcc01:us-central1:telemedicine-posyandu
+```yaml
+substitutions:
+  _CLOUD_SQL_INSTANCE: 'PROJECT_ID:REGION:INSTANCE_ID'
 ```
 
-Nilai socket path yang dibaca backend:
-
-```env
-DB_SOCKET_PATH=/cloudsql/PROJECT_ID:REGION:INSTANCE_ID
-```
-
-Saat `DB_SOCKET_PATH` diisi, kode akan mengabaikan `DB_HOST` dan `DB_PORT`.
-
-Env database yang dipakai:
-
-```env
-DB_PORT=3306
-DB_USER=
-DB_PASSWORD=
-DB_NAME=telemedicine_posyandu
-DB_SSL=false
-DB_SOCKET_PATH=/cloudsql/PROJECT_ID:REGION:INSTANCE_ID
-```
-
-Untuk local development, ada dua pilihan:
-
-- Pakai public IP Cloud SQL langsung di `DB_HOST`, dengan `DB_SSL=true` jika koneksi membutuhkan TLS.
-- Pakai Cloud SQL Auth Proxy, lalu set `DB_HOST=127.0.0.1` dan `DB_SSL=false`.
-
-Untuk Cloud Run, lakukan dua hal:
-
-1. Tambahkan Cloud SQL instance ke service Cloud Run.
-2. Set `DB_SOCKET_PATH=/cloudsql/PROJECT_ID:REGION:INSTANCE_ID`.
-
-Di repo ini, `cloudbuild.yaml` sudah memakai:
+Cloud Run menghubungkan instance dengan:
 
 ```yaml
 --add-cloudsql-instances
 $_CLOUD_SQL_INSTANCE
---set-env-vars
-DB_SOCKET_PATH=/cloudsql/$_CLOUD_SQL_INSTANCE,...
 ```
 
-Ganti substitution `_CLOUD_SQL_INSTANCE` di `cloudbuild.yaml` dengan instance connection name asli dari Cloud SQL kamu.
+Backend menerima socket path:
+
+```env
+DB_SOCKET_PATH=/cloudsql/$_CLOUD_SQL_INSTANCE
+```
+
+Saat `DB_SOCKET_PATH` aktif, kode di `backend/config/db.js` memakai `socketPath` dan mengabaikan `DB_HOST` serta `DB_PORT`.
 
 ## Cloud Storage Avatar
 
-Foto avatar sekarang disimpan ke Google Cloud Storage, bukan ke folder lokal. Bucket yang dipakai di env:
+Google Cloud Storage dipakai untuk menyimpan foto avatar ibu dan anak.
+
+Bucket yang dipakai:
 
 ```env
 GCS_BUCKET_NAME=telemedicine-posyandu-avatar
 ```
 
-Alur upload:
+Alur upload avatar:
 
-- Client mengirim multipart file field `ava_pict`.
-- `multer.memoryStorage()` menyimpan file sementara di memory request.
-- Backend membuat path seperti `/uploads/profile/xxx.jpg` atau `/uploads/anak/xxx.jpg`.
-- File diupload ke object Cloud Storage dengan object name `profile/xxx.jpg` atau `anak/xxx.jpg`.
-- Database tetap menyimpan path `/uploads/...` agar respons API tetap kompatibel dengan frontend lama.
-- Saat URL `/uploads/...` dibuka, backend mengambil file dari Cloud Storage dan mengirimkannya ke client.
+1. Flutter mengirim request multipart dengan field file `ava_pict`.
+2. Middleware `multer.memoryStorage()` membaca file ke memory request.
+3. Backend membuat path kompatibel seperti:
+   ```txt
+   /uploads/profile/filename.jpg
+   /uploads/anak/filename.jpg
+   ```
+4. File diupload ke Cloud Storage dengan object name:
+   ```txt
+   profile/filename.jpg
+   anak/filename.jpg
+   ```
+5. Database tetap menyimpan path `/uploads/...`.
+6. API mengembalikan `ava_pict_url` berupa URL backend:
+   ```txt
+   https://backend-url/uploads/profile/filename.jpg
+   ```
+7. Saat URL itu dibuka, backend mengambil file dari Cloud Storage dan mengirimkannya ke client.
 
-Bucket tidak wajib public karena file disajikan lewat backend. Service account runtime Cloud Run harus punya role:
-
-```txt
-Storage Object Admin
-```
-
-Principal yang kamu pilih untuk sekarang:
-
-```txt
-255520032221-compute@developer.gserviceaccount.com
-```
-
-Itu adalah Compute Engine default service account yang biasanya dipakai Cloud Run jika runtime service account belum diganti.
+Dengan desain ini, bucket avatar tidak perlu dibuat public. File tetap bisa diakses lewat backend.
 
 ## Firebase dan Firestore
 
-File `backend/config/firebase.js` mendukung tiga cara credential:
+Firebase dipakai untuk bagian NoSQL dan integrasi mobile. Backend menggunakan `firebase-admin` melalui `backend/config/firebase.js`.
 
-1. Env `FIREBASE_SERVICE_ACCOUNT_JSON`.
-2. File lokal `backend/serviceAccountKey.json`.
-3. Application Default Credentials.
+Urutan credential Firebase yang didukung:
 
-Untuk local development, cara termudah adalah menaruh file Firebase Admin SDK key:
+1. `FIREBASE_SERVICE_ACCOUNT_JSON`
+2. `backend/serviceAccountKey.json`
+3. Application Default Credentials
 
-```txt
-backend/serviceAccountKey.json
-```
+Dalam pengembangan lokal, file `backend/serviceAccountKey.json` bisa dipakai. File ini tidak boleh dicommit karena berisi private key.
 
-File ini sudah masuk `.gitignore`, jadi jangan commit ke GitHub.
+Firestore dipakai untuk data yang lebih fleksibel, misalnya:
 
-Untuk Cloud Run, cara yang lebih aman adalah menyimpan JSON Firebase di Secret Manager, lalu inject sebagai env:
+- catatan pemeriksaan tambahan
+- growth chart
+- dynamic examination
+- data mobile yang tidak selalu cocok dengan skema tabel SQL tetap
 
-```env
-FIREBASE_SERVICE_ACCOUNT_JSON={"type":"service_account",...}
-```
-
-Catatan arsitektur hybrid:
-
-- Cloud SQL menyimpan data utama seperti pengguna, ibu, anak, imunisasi, pemeriksaan, dan avatar path.
-- Firestore/Firebase dipakai untuk kebutuhan NoSQL seperti catatan fleksibel, growth chart, dynamic examination, dan fitur mobile yang butuh skema lebih lentur.
+Pembagian ini membuat Cloud SQL tetap menjadi sumber data relasional utama, sementara Firestore dipakai untuk kebutuhan NoSQL.
 
 ## IAM dan Service Account
 
-Ada beberapa service account yang perannya berbeda:
+Ada beberapa service account yang terlibat:
 
-- Compute Engine default service account: runtime identity Cloud Run jika belum diganti.
-- Cloud Build service account: menjalankan build, push image, dan deploy.
-- Cloud Run Service Agent: service agent internal Google, bukan akun aplikasi backend.
-- Firestore/Firebase service account: credential Firebase Admin jika memakai file `serviceAccountKey.json`.
+- **Cloud Build service account**  
+  Dipakai saat build image, push image, dan deploy Cloud Run.
 
-Untuk konfigurasi saat ini, berikan akses bucket avatar ke:
+- **Cloud Run runtime service account**  
+  Dipakai backend saat aplikasi sedang berjalan.
 
-```txt
-255520032221-compute@developer.gserviceaccount.com
-```
+- **Cloud Run Service Agent**  
+  Service agent internal Google. Ini bukan akun yang dipakai langsung oleh kode backend.
 
-Role:
+- **Firebase service account**  
+  Dipakai Firebase Admin SDK jika backend menggunakan `serviceAccountKey.json` atau `FIREBASE_SERVICE_ACCOUNT_JSON`.
 
-```txt
-Storage Object Admin
-```
-
-Karena Cloud Run memakai Cloud SQL Unix socket, runtime service account Cloud Run perlu:
+Runtime service account Cloud Run perlu role:
 
 ```txt
 Cloud SQL Client
+Storage Object Admin
 ```
 
-Untuk konfigurasi sekarang, tambahkan role itu ke runtime service account yang sama dengan backend, yaitu jika belum diganti:
+`Cloud SQL Client` diperlukan agar Cloud Run bisa memakai Cloud SQL Unix socket. `Storage Object Admin` diperlukan agar backend bisa upload, baca, dan hapus avatar di bucket.
+
+Untuk konfigurasi saat ini, runtime service account yang digunakan kemungkinan:
 
 ```txt
 255520032221-compute@developer.gserviceaccount.com
 ```
 
-Cloud Build service account tetap butuh izin untuk:
+Role `Storage Object Admin` bisa diberikan di level bucket avatar saja. Role `Cloud SQL Client` biasanya diberikan di level project.
 
-- Build Docker image.
-- Push image ke Container Registry.
-- Deploy Cloud Run service.
+## Environment
 
-Mengubah atau menambah izin runtime service account tidak otomatis merusak trigger Cloud Build.
+File `.env.example` adalah template konfigurasi. File `backend/.env` dipakai untuk pengembangan lokal.
 
-## Cloud Build dan Cloud Run
+Cloud Run tidak otomatis membaca file `.env`. Nilai environment production dikirim oleh `cloudbuild.yaml` melalui `--set-env-vars`.
 
-Pipeline deployment ada di `cloudbuild.yaml`:
+Environment penting:
 
-1. Build Docker image dari `Dockerfile`.
-2. Push image ke `gcr.io/$PROJECT_ID/telemedicine-backend`.
-3. Deploy image ke Cloud Run service `backend`.
+```env
+JWT_SECRET=
+DB_USER=
+DB_PASSWORD=
+DB_NAME=telemedicine_posyandu
+DB_SOCKET_PATH=/cloudsql/PROJECT_ID:REGION:INSTANCE_ID
+DB_SSL=false
+GCS_BUCKET_NAME=telemedicine-posyandu-avatar
+FIREBASE_SERVICE_ACCOUNT_JSON=
+NOTIFICATION_WORKER_SECRET=
+```
 
-Env Cloud Run diset langsung di bagian `--set-env-vars`:
-
-```yaml
---add-cloudsql-instances
-$_CLOUD_SQL_INSTANCE
---set-env-vars
-DB_SOCKET_PATH=/cloudsql/$_CLOUD_SQL_INSTANCE,DB_PORT=3306,DB_USER=...,DB_PASSWORD=...,DB_NAME=telemedicine_posyandu,DB_SSL=false,JWT_SECRET=...,GCS_BUCKET_NAME=telemedicine-posyandu-avatar
-``
+Untuk local development, `DB_SOCKET_PATH` biasanya dikosongkan dan koneksi database bisa memakai `DB_HOST`.
 
 ## Endpoint Utama
+
+Autentikasi dan profil:
 
 - `POST /api/auth/login`
 - `POST /api/auth/register`
@@ -238,64 +250,49 @@ DB_SOCKET_PATH=/cloudsql/$_CLOUD_SQL_INSTANCE,DB_PORT=3306,DB_USER=...,DB_PASSWO
 - `PATCH /api/auth/me/password`
 - `POST /api/auth/me/avatar`
 - `PATCH /api/auth/me/avatar`
-- `GET /api/dashboard`
+
+Data anak:
+
 - `GET /api/anak`
 - `POST /api/anak`
 - `GET /api/anak/:id`
 - `POST /api/anak/:id/avatar`
 - `PATCH /api/anak/:id/avatar`
+
+Dashboard:
+
+- `GET /api/dashboard`
+
+Imunisasi:
+
 - `GET /api/imunisasi`
 - `POST /api/imunisasi`
 - `PATCH /api/imunisasi/:id/status`
-- `GET /api/pemeriksaan`
-- `POST /api/pemeriksaan`
-- `GET /api/notifications`
-- `POST /api/notifications/device-token`
-
-Alias endpoint untuk skenario SQL berbahasa Inggris:
-
 - `GET /api/immunizations`
 - `POST /api/immunizations`
+
+Pemeriksaan:
+
+- `GET /api/pemeriksaan`
+- `POST /api/pemeriksaan`
 - `GET /api/examinations`
 - `POST /api/examinations`
 
-## Upload Avatar
+Notifikasi:
 
-Field multipart yang digunakan:
+- `GET /api/notifications`
+- `POST /api/notifications/device-token`
+- `DELETE /api/notifications/device-token`
+- `PATCH /api/notifications/read-all`
+- `PATCH /api/notifications/:id/read`
+- `POST /api/notifications/process-events`
 
-```txt
-ava_pict
-```
+## Keamanan
 
-Endpoint foto ibu:
+Hal yang tidak boleh dicommit:
 
-```txt
-POST /api/auth/me/avatar
-PATCH /api/auth/me/avatar
-```
+- `backend/.env`
+- `backend/serviceAccountKey.json`
+- file key service account lain
 
-Endpoint foto anak:
-
-```txt
-POST /api/anak/:id/avatar
-PATCH /api/anak/:id/avatar
-```
-
-Respons mengembalikan:
-
-```json
-{
-  "ava_pict": "/uploads/profile/filename.jpg",
-  "ava_pict_url": "https://backend-url/uploads/profile/filename.jpg"
-}
-```
-
-Walaupun URL terlihat seperti file backend, file aslinya berada di Cloud Storage.
-
-## Catatan Keamanan
-
-- Jangan commit `backend/.env`.
-- Jangan commit `backend/serviceAccountKey.json`.
-- Untuk production, pindahkan password database, JWT secret, dan Firebase JSON ke Secret Manager.
-- Hindari membuat bucket backup SQL public.
-- Avatar bisa tetap private karena backend yang melakukan serve file dari bucket.
+Untuk production, secret seperti password database, JWT secret, dan Firebase service account sebaiknya disimpan di Secret Manager. Bucket backup SQL jangan dibuat public. Bucket avatar juga bisa tetap private karena file disajikan lewat backend.
