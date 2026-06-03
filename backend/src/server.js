@@ -8,15 +8,28 @@ const routes  = require('./routes');
 
 const app  = express();
 const PORT = process.env.PORT || 8000;
+const allowedOrigins = [
+  'https://telemedicine-fe-dot-praktikum-tcc01.uc.r.appspot.com',
+  'http://localhost:3000',
+  'http://localhost:5000',
+  'http://127.0.0.1:5500'
+];
 
 // ── MIDDLEWARE ────────────────────────────────────────
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
-app.use(cors({
-  origin: 'https://telemedicine-fe-dot-praktikum-tcc01.uc.r.appspot.com',
-  methods: ['GET','POST','PUT','PATCH','DELETE'],
+const corsOptions = {
+  origin(origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error(`Origin ${origin} tidak diizinkan oleh CORS`));
+  },
+  methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
   allowedHeaders: ['Content-Type','Authorization'],
   credentials: true
-}));
+};
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

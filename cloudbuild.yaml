@@ -25,6 +25,8 @@ steps:
       - --region
       - us-central1
       - --allow-unauthenticated
+      - --ingress
+      - all
       - --set-env-vars
       - DB_HOST=34.42.191.35,DB_PORT=3306,DB_USER=adminposyandu,DB_PASSWORD=pass123,DB_NAME=telemedicine_posyandu,DB_SSL=true,GCS_BUCKET_NAME=posyandu-avatars,JWT_SECRET=ganti_dengan_secret_yang_panjang
 
