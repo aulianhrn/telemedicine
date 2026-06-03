@@ -111,7 +111,7 @@ Di `cloudbuild.yaml`, nilai ini diwakili oleh substitution:
 
 ```yaml
 substitutions:
-  _CLOUD_SQL_INSTANCE: 'PROJECT_ID:REGION:INSTANCE_ID'
+  _CLOUD_SQL_INSTANCE: 'praktikum-tcc01:us-central1:mysql-posyandu'
 ```
 
 Cloud Run menghubungkan instance dengan:
@@ -124,7 +124,7 @@ $_CLOUD_SQL_INSTANCE
 Backend menerima socket path:
 
 ```env
-DB_SOCKET_PATH=/cloudsql/$_CLOUD_SQL_INSTANCE
+DB_SOCKET_PATH=/cloudsql/praktikum-tcc01:us-central1:mysql-posyandu
 ```
 
 Saat `DB_SOCKET_PATH` aktif, kode di `backend/config/db.js` memakai `socketPath` dan mengabaikan `DB_HOST` serta `DB_PORT`.
@@ -227,7 +227,7 @@ JWT_SECRET=
 DB_USER=
 DB_PASSWORD=
 DB_NAME=telemedicine_posyandu
-DB_SOCKET_PATH=/cloudsql/PROJECT_ID:REGION:INSTANCE_ID
+DB_SOCKET_PATH=/cloudsql/praktikum-tcc01:us-central1:mysql-posyandu
 DB_SSL=false
 GCS_BUCKET_NAME=telemedicine-posyandu-avatar
 FIREBASE_SERVICE_ACCOUNT_JSON=
