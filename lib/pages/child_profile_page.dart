@@ -20,6 +20,8 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage> {
   final ImagePicker _imagePicker = ImagePicker();
   late Future<List<dynamic>> _childrenFuture;
+  int? _initialChildId;
+  bool _readRouteArgument = false;
   Uint8List? _pickedPhotoBytes;
   bool _isUploadingPhoto = false;
   int _photoVersion = 0;
@@ -28,6 +30,20 @@ class _ProfilePageState extends State<ProfilePage> {
   void initState() {
     super.initState();
     _childrenFuture = ApiService.anak();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_readRouteArgument) {
+      return;
+    }
+
+    final argument = ModalRoute.of(context)?.settings.arguments;
+    _initialChildId = argument is int
+        ? argument
+        : int.tryParse(argument?.toString() ?? '');
+    _readRouteArgument = true;
   }
 
   @override
@@ -80,7 +96,7 @@ class _ProfilePageState extends State<ProfilePage> {
             return const Center(child: Text("Belum ada data anak."));
           }
 
-          final child = Map<String, dynamic>.from(children.first as Map);
+          final child = _selectedChild(children);
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16),
@@ -492,12 +508,32 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   int? _childId(Map<String, dynamic> child) {
-    final id = child['id'] ?? child['anak_id'];
+    final id =
+        child['anak_id'] ??
+        child['child_id'] ??
+        child['id_anak'] ??
+        child['id'];
     if (id is int) {
       return id;
     }
 
     return int.tryParse(id?.toString() ?? '');
+  }
+
+  Map<String, dynamic> _selectedChild(List<dynamic> children) {
+    final selectedId = _initialChildId;
+    if (selectedId != null) {
+      for (final child in children) {
+        if (child is Map) {
+          final data = Map<String, dynamic>.from(child);
+          if (_childId(data) == selectedId) {
+            return data;
+          }
+        }
+      }
+    }
+
+    return Map<String, dynamic>.from(children.first as Map);
   }
 
   String? _childPhotoUrl(Map<String, dynamic> child) {

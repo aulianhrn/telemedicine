@@ -24,7 +24,14 @@ class ProfileSayaPage extends StatefulWidget {
 
 class _ProfileSayaPageState extends State<ProfileSayaPage> {
   final ImagePicker _imagePicker = ImagePicker();
+  late Future<List<dynamic>> _childrenFuture;
   bool _isPickingPhoto = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _childrenFuture = ApiService.anak();
+  }
 
   Future<void> _openPhotoOptions() async {
     await showModalBottomSheet<void>(
@@ -240,12 +247,68 @@ class _ProfileSayaPageState extends State<ProfileSayaPage> {
               ),
               child: Column(
                 children: [
-                  menuItem(
-                    icon: Icons.child_care,
-                    title: "Data Anak",
-                    color: Colors.blue,
-                    onTap: () {
-                      Navigator.pushNamed(context, AppRoutes.childProfile);
+                  FutureBuilder<List<dynamic>>(
+                    future: _childrenFuture,
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return menuItem(
+                          icon: Icons.child_care,
+                          title: "Memuat data anak...",
+                          color: Colors.blue,
+                          onTap: () {},
+                          showChevron: false,
+                        );
+                      }
+
+                      final children = (snapshot.data ?? [])
+                          .whereType<Map>()
+                          .map((item) => Map<String, dynamic>.from(item))
+                          .toList();
+                      if (children.isEmpty) {
+                        return menuItem(
+                          icon: Icons.child_care,
+                          title: "Data Anak",
+                          color: Colors.blue,
+                          onTap: () {
+                            Navigator.pushNamed(
+                              context,
+                              AppRoutes.childProfile,
+                            );
+                          },
+                        );
+                      }
+
+                      return Column(
+                        children: [
+                          ...children.asMap().entries.map((entry) {
+                            final index = entry.key;
+                            final child = entry.value;
+                            return Column(
+                              children: [
+                                menuItem(
+                                  icon: Icons.child_care,
+                                  title: "Data ${_childName(child)}",
+                                  color: Colors.blue,
+                                  onTap: () {
+                                    Navigator.pushNamed(
+                                      context,
+                                      AppRoutes.childProfile,
+                                      arguments: _childId(child),
+                                    );
+                                  },
+                                ),
+                                if (index != children.length - 1)
+                                  Divider(
+                                    height: 1,
+                                    thickness: 1,
+                                    indent: 76,
+                                    color: Colors.grey.shade100,
+                                  ),
+                              ],
+                            );
+                          }),
+                        ],
+                      );
                     },
                   ),
                   Divider(
@@ -446,5 +509,25 @@ class _ProfileSayaPageState extends State<ProfileSayaPage> {
         ),
       ),
     );
+  }
+
+  int? _childId(Map<String, dynamic> child) {
+    final id =
+        child['anak_id'] ??
+        child['child_id'] ??
+        child['id_anak'] ??
+        child['id'];
+    if (id is int) {
+      return id;
+    }
+
+    return int.tryParse(id?.toString() ?? '');
+  }
+
+  String _childName(Map<String, dynamic> child) {
+    return child['nama_anak']?.toString() ??
+        child['nama']?.toString() ??
+        child['child_name']?.toString() ??
+        'Anak';
   }
 }

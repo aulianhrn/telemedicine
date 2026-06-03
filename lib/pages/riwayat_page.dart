@@ -7,7 +7,7 @@ import 'package:telemedicine/widgets/bottom_navbar.dart';
 import 'package:telemedicine/widgets/growth_summary_widgets.dart';
 import 'package:telemedicine/widgets/profile_avatar.dart';
 
-class RiwayatPage extends StatelessWidget {
+class RiwayatPage extends StatefulWidget {
   final bool showBottomNavbar;
   final VoidCallback? onBackToHome;
 
@@ -16,6 +16,36 @@ class RiwayatPage extends StatelessWidget {
     this.showBottomNavbar = true,
     this.onBackToHome,
   });
+
+  @override
+  State<RiwayatPage> createState() => _RiwayatPageState();
+}
+
+class _RiwayatPageState extends State<RiwayatPage> {
+  late final Future<_RiwayatData> _riwayatFuture;
+  int? _selectedChildId;
+
+  @override
+  void initState() {
+    super.initState();
+    _riwayatFuture = _loadRiwayatData();
+  }
+
+  Future<_RiwayatData> _loadRiwayatData() async {
+    final results = await Future.wait([
+      ApiService.anak(),
+      ApiService.pemeriksaan(),
+    ]);
+    final children = results[0]
+        .whereType<Map>()
+        .map((item) => Map<String, dynamic>.from(item))
+        .toList();
+    final items = results[1]
+        .whereType<Map>()
+        .map((item) => Map<String, dynamic>.from(item))
+        .toList();
+    return _RiwayatData(children: children, items: items);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -27,8 +57,8 @@ class RiwayatPage extends StatelessWidget {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Color(0xFF006E2F)),
           onPressed: () {
-            if (onBackToHome != null) {
-              onBackToHome!();
+            if (widget.onBackToHome != null) {
+              widget.onBackToHome!();
               return;
             }
 
@@ -49,8 +79,8 @@ class RiwayatPage extends StatelessWidget {
           ),
         ],
       ),
-      body: FutureBuilder<List<dynamic>>(
-        future: ApiService.pemeriksaan(),
+      body: FutureBuilder<_RiwayatData>(
+        future: _riwayatFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -68,7 +98,13 @@ class RiwayatPage extends StatelessWidget {
             );
           }
 
-          final items = _sortByLatestCheckup(snapshot.data ?? []);
+          final data = snapshot.data!;
+          _selectedChildId ??= data.children.isEmpty
+              ? null
+              : _childId(data.children.first);
+          final items = _sortByLatestCheckup(
+            _filterBySelectedChild(data.items, data.children),
+          );
           final first = items.isEmpty
               ? null
               : Map<String, dynamic>.from(items.first as Map);
@@ -155,6 +191,10 @@ class RiwayatPage extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 14),
+                if (data.children.length > 1) ...[
+                  _childDropdown(data.children),
+                  const SizedBox(height: 14),
+                ],
                 _nutritionStatusSection(first),
                 const SizedBox(height: 24),
                 if (items.isEmpty)
@@ -211,9 +251,35 @@ class RiwayatPage extends StatelessWidget {
           );
         },
       ),
-      bottomNavigationBar: showBottomNavbar
+      bottomNavigationBar: widget.showBottomNavbar
           ? const BottomNavbar(currentIndex: 2)
           : null,
+    );
+  }
+
+  Widget _childDropdown(List<Map<String, dynamic>> children) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE8EEF4)),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<int>(
+          value: _selectedChildId,
+          isExpanded: true,
+          icon: const Icon(Icons.keyboard_arrow_down),
+          items: children.map((child) {
+            return DropdownMenuItem<int>(
+              value: _childId(child),
+              child: Text("Lihat riwayat pemeriksaan ${_childName(child)}"),
+            );
+          }).toList(),
+          onChanged: (value) => setState(() => _selectedChildId = value),
+        ),
+      ),
     );
   }
 
@@ -281,12 +347,48 @@ class RiwayatPage extends StatelessWidget {
   }
 
   int? _childId(Map<String, dynamic>? data) {
-    final id = data?['anak_id'] ?? data?['child_id'] ?? data?['id_anak'];
+    final id =
+        data?['anak_id'] ??
+        data?['child_id'] ??
+        data?['id_anak'] ??
+        data?['id'];
     if (id is int) {
       return id;
     }
 
     return int.tryParse(id?.toString() ?? '');
+  }
+
+  List<Map<String, dynamic>> _filterBySelectedChild(
+    List<Map<String, dynamic>> items,
+    List<Map<String, dynamic>> children,
+  ) {
+    final selectedId = _selectedChildId;
+    if (selectedId == null || children.isEmpty) {
+      return items;
+    }
+
+    final selectedChild = children.firstWhere(
+      (child) => _childId(child) == selectedId,
+      orElse: () => <String, dynamic>{},
+    );
+    final selectedName = _childName(selectedChild).toLowerCase();
+
+    return items.where((item) {
+      final itemChildId = _childId(item);
+      if (itemChildId != null) {
+        return itemChildId == selectedId;
+      }
+
+      return _childName(item).toLowerCase() == selectedName;
+    }).toList();
+  }
+
+  String _childName(Map<String, dynamic> data) {
+    return data['nama_anak']?.toString() ??
+        data['nama']?.toString() ??
+        data['child_name']?.toString() ??
+        'Anak';
   }
 
   List<dynamic> _sortByLatestCheckup(List<dynamic> items) {
@@ -558,4 +660,11 @@ class RiwayatPage extends StatelessWidget {
       ),
     );
   }
+}
+
+class _RiwayatData {
+  final List<Map<String, dynamic>> children;
+  final List<Map<String, dynamic>> items;
+
+  const _RiwayatData({required this.children, required this.items});
 }

@@ -15,15 +15,32 @@ class JadwalImunisasiPage extends StatefulWidget {
 }
 
 class _JadwalImunisasiPageState extends State<JadwalImunisasiPage> {
-  late final Future<List<dynamic>> _imunisasiFuture;
+  late final Future<_ImunisasiData> _imunisasiFuture;
   late DateTime _visibleMonth;
+  int? _selectedChildId;
 
   @override
   void initState() {
     super.initState();
-    _imunisasiFuture = ApiService.imunisasi();
+    _imunisasiFuture = _loadImunisasiData();
     final now = DateTime.now();
     _visibleMonth = DateTime(now.year, now.month);
+  }
+
+  Future<_ImunisasiData> _loadImunisasiData() async {
+    final results = await Future.wait([
+      ApiService.anak(),
+      ApiService.imunisasi(),
+    ]);
+    final children = results[0]
+        .whereType<Map>()
+        .map((item) => Map<String, dynamic>.from(item))
+        .toList();
+    final immunizations = results[1]
+        .whereType<Map>()
+        .map((item) => Map<String, dynamic>.from(item))
+        .toList();
+    return _ImunisasiData(children: children, items: immunizations);
   }
 
   @override
@@ -55,7 +72,7 @@ class _JadwalImunisasiPageState extends State<JadwalImunisasiPage> {
       ),
 
       // ================= BODY =================
-      body: FutureBuilder<List<dynamic>>(
+      body: FutureBuilder<_ImunisasiData>(
         future: _imunisasiFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -74,11 +91,14 @@ class _JadwalImunisasiPageState extends State<JadwalImunisasiPage> {
             );
           }
 
-          final items = snapshot.data ?? [];
-          final sortedItems = _sortImunisasiByLatestDate(items);
+          final data = snapshot.data!;
+          final items = data.items;
+          _selectedChildId ??= data.children.isEmpty
+              ? null
+              : _childId(data.children.first);
+          final filteredItems = _filterBySelectedChild(items, data.children);
           final nextItems = items
-              .where((item) => item is Map && item['status'] == 'pending')
-              .cast<Map>()
+              .where((item) => item['status'] == 'pending')
               .toList();
           nextItems.sort((a, b) {
             final dateA = _parseDate(a['tanggal_jadwal']);
@@ -97,6 +117,7 @@ class _JadwalImunisasiPageState extends State<JadwalImunisasiPage> {
             return dateA.compareTo(dateB);
           });
           final next = nextItems.isNotEmpty ? nextItems.first : null;
+          final selectedSortedItems = _sortImunisasiByLatestDate(filteredItems);
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16),
@@ -135,101 +156,33 @@ class _JadwalImunisasiPageState extends State<JadwalImunisasiPage> {
 
                 const SizedBox(height: 10),
 
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF006E2F),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.green.shade300,
-                          borderRadius: BorderRadius.circular(30),
-                        ),
-                        child: const Text(
-                          "Mendatang",
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 16),
-
-                      Text(
-                        next?['nama_vaksin']?.toString() ?? "Belum ada jadwal",
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-
-                      const SizedBox(height: 12),
-
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.calendar_today,
-                            color: Colors.white70,
-                            size: 18,
-                          ),
-
-                          const SizedBox(width: 8),
-
-                          Text(
-                            displayDate(next?['tanggal_jadwal']),
-                            style: const TextStyle(color: Colors.white70),
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 10),
-
-                      Row(
-                        children: const [
-                          Icon(
-                            Icons.location_on,
-                            color: Colors.white70,
-                            size: 18,
-                          ),
-
-                          SizedBox(width: 8),
-
-                          Text(
-                            "Posyandu Melati 04",
-                            style: TextStyle(color: Colors.white70),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
+                if (nextItems.isEmpty)
+                  _reminderCard(null)
+                else
+                  ...nextItems.map(_reminderCard),
 
                 const SizedBox(height: 24),
 
                 // ================= VAKSIN LIST =================
-                const Text(
-                  "RIWAYAT & DAFTAR VAKSIN",
-                  style: TextStyle(
-                    color: Colors.blue,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                  ),
+                Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        "RIWAYAT & DAFTAR VAKSIN",
+                        style: TextStyle(
+                          color: Colors.blue,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                    if (data.children.length > 1) _childDropdown(data.children),
+                  ],
                 ),
 
                 const SizedBox(height: 14),
 
-                if (items.isEmpty)
+                if (selectedSortedItems.isEmpty)
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(18),
@@ -240,7 +193,7 @@ class _JadwalImunisasiPageState extends State<JadwalImunisasiPage> {
                     child: const Text("Belum ada data imunisasi."),
                   )
                 else
-                  ...sortedItems.map((item) {
+                  ...selectedSortedItems.map((item) {
                     final data = Map<String, dynamic>.from(item as Map);
                     final done = data['status'] == 'selesai';
                     return vaksinItem(
@@ -264,6 +217,111 @@ class _JadwalImunisasiPageState extends State<JadwalImunisasiPage> {
       bottomNavigationBar: widget.showBottomNavbar
           ? const BottomNavbar(currentIndex: 1)
           : null,
+    );
+  }
+
+  Widget _reminderCard(Map<String, dynamic>? data) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: const Color(0xFF006E2F),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.green.shade300,
+              borderRadius: BorderRadius.circular(30),
+            ),
+            child: const Text(
+              "Mendatang",
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            data?['nama_vaksin']?.toString() ?? "Belum ada jadwal",
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              const Icon(Icons.child_care, color: Colors.white70, size: 18),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  data == null ? '-' : _childName(data),
+                  style: const TextStyle(color: Colors.white70),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              const Icon(Icons.calendar_today, color: Colors.white70, size: 18),
+              const SizedBox(width: 8),
+              Text(
+                displayDate(data?['tanggal_jadwal']),
+                style: const TextStyle(color: Colors.white70),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: const [
+              Icon(Icons.location_on, color: Colors.white70, size: 18),
+              SizedBox(width: 8),
+              Text(
+                "Posyandu Melati 04",
+                style: TextStyle(color: Colors.white70),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _childDropdown(List<Map<String, dynamic>> children) {
+    return Container(
+      height: 38,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE8EEF4)),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<int>(
+          value: _selectedChildId,
+          icon: const Icon(Icons.keyboard_arrow_down, size: 18),
+          style: const TextStyle(
+            color: Color(0xFF006E2F),
+            fontWeight: FontWeight.w700,
+            fontSize: 12,
+          ),
+          items: children.map((child) {
+            return DropdownMenuItem<int>(
+              value: _childId(child),
+              child: Text(_childName(child)),
+            );
+          }).toList(),
+          onChanged: (value) => setState(() => _selectedChildId = value),
+        ),
+      ),
     );
   }
 
@@ -466,6 +524,48 @@ class _JadwalImunisasiPageState extends State<JadwalImunisasiPage> {
     );
   }
 
+  List<dynamic> _filterBySelectedChild(
+    List<Map<String, dynamic>> items,
+    List<Map<String, dynamic>> children,
+  ) {
+    final selectedId = _selectedChildId;
+    if (selectedId == null || children.isEmpty) {
+      return items;
+    }
+
+    final selectedChild = children.firstWhere(
+      (child) => _childId(child) == selectedId,
+      orElse: () => <String, dynamic>{},
+    );
+    final selectedName = _childName(selectedChild).toLowerCase();
+
+    return items.where((item) {
+      final itemChildId = _childId(item);
+      if (itemChildId != null) {
+        return itemChildId == selectedId;
+      }
+
+      return _childName(item).toLowerCase() == selectedName;
+    }).toList();
+  }
+
+  int? _childId(Map<String, dynamic> data) {
+    final id =
+        data['anak_id'] ?? data['child_id'] ?? data['id_anak'] ?? data['id'];
+    if (id is int) {
+      return id;
+    }
+
+    return int.tryParse(id?.toString() ?? '');
+  }
+
+  String _childName(Map<String, dynamic> data) {
+    return data['nama_anak']?.toString() ??
+        data['nama']?.toString() ??
+        data['child_name']?.toString() ??
+        'Anak';
+  }
+
   Map<String, String> _markedDates(List<dynamic> items) {
     final result = <String, String>{};
     for (final item in items) {
@@ -640,4 +740,11 @@ class _LegendDot extends StatelessWidget {
       ],
     );
   }
+}
+
+class _ImunisasiData {
+  final List<Map<String, dynamic>> children;
+  final List<Map<String, dynamic>> items;
+
+  const _ImunisasiData({required this.children, required this.items});
 }
