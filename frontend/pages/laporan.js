@@ -8,7 +8,7 @@ function getLaporanHTML() {
         <div class="flex flex-wrap justify-between items-center mb-5">
             <div>
                 <h2 class="text-headline-lg font-bold">Laporan Posyandu</h2>
-                <p class="text-on-surface-variant">Rekap dan export laporan bulanan</p>
+                <p class="text-on-surface-variant">Rekap laporan bulanan</p>
             </div>
         </div>
         <div class="bg-surface-container-lowest rounded-xl border p-5 mb-5">
@@ -46,11 +46,16 @@ window.loadRekap = async function () {
         headers: { Authorization: 'Bearer ' + token }
     }).then(r => r.json()).catch(() => null);
 
-    if (!res?.success) { el.innerHTML = '<div class="p-8 text-center text-error">Gagal memuat rekap.</div>'; return; }
+    if (!res?.success) { 
+        el.innerHTML = '<div class="p-8 text-center text-error">Gagal memuat rekap.</div>'; 
+        return; 
+    }
+    
     const d = res.data;
 
+    // Hanya menampilkan 4 card data rekap (tanpa card bawah "Rekap Juni 2026")
     el.innerHTML = `
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <div class="bg-surface-container-lowest p-5 rounded-xl border">
                 <span class="material-symbols-outlined text-primary bg-primary/10 p-2 rounded-lg block w-fit">stethoscope</span>
                 <p class="text-on-surface-variant mt-3 text-sm">Total Pemeriksaan</p>
@@ -71,33 +76,7 @@ window.loadRekap = async function () {
                 <p class="text-on-surface-variant mt-3 text-sm">Imunisasi Selesai</p>
                 <p class="text-3xl font-bold mt-1">${d.imunisasi?.selesai || 0}<span class="text-base text-on-surface-variant">/${d.imunisasi?.total || 0}</span></p>
             </div>
-        </div>
-        <div class="bg-surface-container-lowest rounded-xl border p-5">
-            <div class="flex justify-between items-center flex-wrap gap-3 mb-3">
-                <h3 class="font-headline-sm">Rekap ${d.periode}</h3>
-                <div class="flex gap-2">
-                    <button onclick="simpanLaporan()" class="border border-outline-variant px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 hover:bg-surface-container-low cursor-pointer">
-                        <span class="material-symbols-outlined text-[18px]">save</span> Simpan
-                    </button>
-                    <a href="${BASE_URL}/laporan/export-pdf?bulan=${b}&tahun=${t}" target="_blank"
-                        class="bg-primary text-white px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 hover:bg-green-800">
-                        <span class="material-symbols-outlined text-[18px]">picture_as_pdf</span> Export PDF
-                    </a>
-                </div>
-            </div>
-            <p class="text-sm text-on-surface-variant">Klik <b>Export PDF</b> untuk mengunduh laporan lengkap periode ${d.periode}.</p>
         </div>`;
 };
 
-window.simpanLaporan = async function () {
-    const token = localStorage.getItem('pos_token');
-    const b = document.getElementById('lapBulan')?.value;
-    const t = document.getElementById('lapTahun')?.value;
-    const res = await fetch(BASE_URL + '/laporan/simpan', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-        body: JSON.stringify({ bulan: b, tahun: t })
-    }).then(r => r.json()).catch(() => null);
-    if (res?.success) showGlobalToast('Laporan berhasil disimpan!');
-    else showGlobalToast(res?.message || 'Gagal menyimpan', true);
-};
+// Fungsi simpanLaporan dihapus karena tidak digunakan
