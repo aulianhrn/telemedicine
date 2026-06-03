@@ -93,7 +93,6 @@ function getDashboardHTML() {
                             <th class="p-4 text-left text-sm">Nama Ibu</th>
                             <th class="p-4 text-left text-sm">Tgl Lahir</th>
                             <th class="p-4 text-left text-sm">JK</th>
-                            <th class="p-4 text-left text-sm">Aksi</th>
                         </tr>
                     </thead>
                     <tbody id="dashAnakTable">
@@ -139,18 +138,63 @@ async function loadDashboard() {
                </div>`
             : `<div class="text-sm text-on-surface-variant text-center py-4">Tidak ada jadwal imunisasi hari ini 🎉</div>`;
 
-        document.getElementById('dashAnakTable').innerHTML = anak.length === 0
-            ? '<tr><td colspan="5" class="p-4 text-center text-on-surface-variant text-sm">Belum ada data anak</td></tr>'
-            : anak.map(a => `
-                <tr class="border-b hover:bg-surface-container-low/50">
-                    <td class="p-4 font-medium">${a.nama}</td>
-                    <td class="p-4 text-sm text-on-surface-variant">${a.ibu?.pengguna?.nama || '—'}</td>
-                    <td class="p-4 text-sm">${formatDate(a.tanggal_lahir)}</td>
-                    <td class="p-4 text-sm">${a.jenis_kelamin === 'L' ? 'Laki-laki' : 'Perempuan'}</td>
-                    <td class="p-4">
-                        <button onclick="openCheckupForAnak('${a.id}')" class="text-primary font-semibold text-sm hover:underline">Checkup</button>
-                    </td>
-                </tr>`).join('');
+            
+        // Tambahkan fungsi helper untuk render baris anak (bisa dipakai di dashboard dan data anak)
+// Buat fungsi render yang lebih fleksibel
+function renderAnakRow(a, showActions = true) {
+    return `
+        <tr class="border-b hover:bg-surface-container-low/50">
+            <td class="p-4 font-medium">
+                ${a.nama}
+                <div class="text-xs text-on-surface-variant">${umur(a.tanggal_lahir)}</div>
+            </td>
+            <td class="p-4 text-sm text-on-surface-variant">${a.nama_ibu || '—'}</td>
+            <td class="p-4 text-sm">${formatDate(a.tanggal_lahir)}</td>
+            <td class="p-4">
+                ${a.jenis_kelamin === 'L' 
+                    ? '<span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-semibold">Laki-laki</span>'
+                    : '<span class="bg-primary/20 text-primary px-3 py-1 rounded-full text-xs font-semibold">Perempuan</span>'}
+            </td>
+            ${showActions ? `
+            <td class="p-4">
+                <div class="flex gap-2 flex-wrap">
+                    <button onclick="openDetailAnak('${a.id}')" class="text-tertiary font-semibold text-sm hover:underline">Detail</button>
+                    <button onclick="openCheckupForAnak('${a.id}')" class="text-primary font-semibold text-sm hover:underline">Checkup</button>
+                </div>
+            </td>
+            ` : ''}
+        </table>
+    `;
+}
+
+// Di loadDashboard() - tanpa aksi
+document.getElementById('dashAnakTable').innerHTML = anak.length === 0
+    ? '<tr><td colspan="4" class="p-4 text-center text-on-surface-variant text-sm">Belum ada data anak</td></tr>'
+    : anak.map(a => renderAnakRow(a, false)).join('');
+//                                              ↑ false = tanpa aksi
+
+// Di loadAnakTable() - dengan aksi
+// Sesuaikan juga di sini jika ingin menggunakan fungsi yang sama
+wrap.innerHTML = `
+    <div class="overflow-x-auto">
+        <table class="min-w-full">
+            <thead class="bg-surface-container-low">
+                <tr>
+                    <th class="p-4 text-left text-sm">Nama Anak</th>
+                    <th class="p-4 text-left text-sm">Nama Ibu</th>
+                    <th class="p-4 text-left text-sm">Tgl Lahir</th>
+                    <th class="p-4 text-left text-sm">JK</th>
+                    <th class="p-4 text-left text-sm">Berat Lahir</th>
+                </tr>
+            </thead>
+            <tbody>
+                # ${list.map(a => renderAnakRow(a, true)).join('')}
+                <!--                          ↑ true = dengan aksi -->
+            </tbody>
+        </table>
+    </div>`;
+
+// Dan di loadAnakTable(), bisa juga pakai fungsi yang sama
     } catch (e) {
         console.error('Dashboard error:', e);
     }
