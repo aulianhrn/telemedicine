@@ -1,2 +1,2 @@
-runtime: nodejs20 #mesin.a
+runtime: nodejs24
 service: telemedicine-fe
