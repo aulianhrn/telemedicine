@@ -112,9 +112,12 @@ function showLoggedInUI() {
     const user = JSON.parse(localStorage.getItem('pos_user') || '{}');
     const initials = (user.nama || 'BA').split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
 
-    document.getElementById('topbarUserInitials').textContent = initials;
+    const topbarInitials = document.getElementById('topbarUserInitials');
+    if (topbarInitials) topbarInitials.textContent = initials;
     document.getElementById('topbarUserName').textContent = user.nama || '—';
     document.getElementById('topbarUserRole').textContent = user.role === 'admin' ? 'Administrator' : 'Bidan';
+
+    loadAvatarToTopbar();
 
     document.getElementById('sidebar').classList.remove('hidden');
     document.getElementById('topNavbar').classList.remove('hidden');
@@ -164,6 +167,7 @@ document.addEventListener('DOMContentLoaded', () => {
             closeNewCheckupModal();
             closeModal('anakModal');
             closeModal('imunisasiModal');
+            closeModal('detailAnakModal');
         }
     });
 

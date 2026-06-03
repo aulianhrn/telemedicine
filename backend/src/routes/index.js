@@ -28,6 +28,10 @@ router.delete('/anak/:id',               auth, requireBidanOrAdmin, anakCtrl.del
 router.post  ('/anak/:id/pemeriksaan',   auth, requireBidanOrAdmin, anakCtrl.createPemeriksaan);
 router.get   ('/anak/:id/grafik',        auth, requireBidanOrAdmin, anakCtrl.grafikPertumbuhan);
 
+// ── PEMERIKSAAN (edit & delete) ───────────────────────
+router.put   ('/pemeriksaan/:id',        auth, requireBidanOrAdmin, anakCtrl.updatePemeriksaan);
+router.delete('/pemeriksaan/:id',        auth, requireBidanOrAdmin, anakCtrl.deletePemeriksaan);
+
 // ── DATA IBU ──────────────────────────────────────────
 router.get('/ibu',       auth, requireBidanOrAdmin, ibuCtrl.listIbu);
 router.get('/ibu/:id',   auth, requireBidanOrAdmin, ibuCtrl.getIbu);
@@ -36,7 +40,6 @@ router.put('/ibu/:id',   auth, requireBidanOrAdmin, ibuCtrl.updateIbu);
 // ── IMUNISASI ─────────────────────────────────────────
 router.get   ('/imunisasi',             auth, requireBidanOrAdmin, imuCtrl.listImunisasi);
 router.post  ('/imunisasi',             auth, requireBidanOrAdmin, imuCtrl.createImunisasi);
-// Support 2 endpoint: PATCH (kompatibel temenmu) + PUT /selesai (endpoint kita)
 router.patch ('/imunisasi/:id/status',  auth, requireBidanOrAdmin, imuCtrl.updateStatus);
 router.put   ('/imunisasi/:id/selesai', auth, requireBidanOrAdmin, imuCtrl.updateStatus);
 router.delete('/imunisasi/:id',         auth, requireBidanOrAdmin, imuCtrl.deleteImunisasi);
@@ -44,6 +47,5 @@ router.delete('/imunisasi/:id',         auth, requireBidanOrAdmin, imuCtrl.delet
 // ── LAPORAN ───────────────────────────────────────────
 router.get ('/laporan/rekap-bulanan',   auth, requireBidanOrAdmin, laporanCtrl.rekapBulanan);
 router.post('/laporan/simpan',          auth, requireBidanOrAdmin, laporanCtrl.simpanLaporan);
-router.get ('/laporan/export-pdf',      auth, requireBidanOrAdmin, laporanCtrl.exportPDF);
 
 module.exports = router;

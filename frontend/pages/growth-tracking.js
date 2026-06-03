@@ -42,7 +42,15 @@ async function loadGrowthAnakList() {
     const res = await fetch(BASE_URL + '/anak?limit=100', { headers: { Authorization: 'Bearer ' + token } }).then(r => r.json()).catch(() => null);
     const sel = document.getElementById('growthAnakSel');
     if (!sel) return;
-    (res?.data || []).forEach(a => { sel.innerHTML += `<option value="${a.id}">${a.nama}</option>`; });
+
+    // Reset dulu sebelum diisi agar tidak looping
+    sel.innerHTML = '<option value="">-- Pilih anak untuk melihat grafik --</option>';
+    (res?.data || []).forEach(a => {
+        const opt = document.createElement('option');
+        opt.value = a.id;
+        opt.textContent = a.nama;
+        sel.appendChild(opt);
+    });
 }
 
 window.loadGrowthChart = async function (id) {

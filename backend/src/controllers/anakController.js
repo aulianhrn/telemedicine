@@ -1,6 +1,6 @@
 const pool = require('../config/db');
 
-// GET /api/anak  (bidan lihat semua, ibu lihat punyanya — tapi web hanya bidan/admin)
+// GET /api/anak
 async function listAnak(req, res, next) {
   try {
     const { search = '', page = 1, limit = 10 } = req.query;
@@ -59,7 +59,6 @@ async function getAnak(req, res, next) {
     );
     if (!rows[0]) return res.status(404).json({ success: false, message: 'Data anak tidak ditemukan.' });
 
-    // Ambil riwayat pemeriksaan
     const [pemeriksaan] = await pool.query(
       `SELECT pm.*, pb.nama AS nama_bidan
        FROM pemeriksaan pm
@@ -116,12 +115,9 @@ async function deleteAnak(req, res, next) {
 }
 
 // POST /api/anak/:id/pemeriksaan
-// Field disesuaikan dengan tabel pemeriksaan temenmu + support alias field
 async function createPemeriksaan(req, res, next) {
   try {
     const anakId = req.params.id;
-
-    // Support dua format field: milik kita & milik temenmu
     const berat_badan  = req.body.berat_badan  ?? req.body.weight;
     const tinggi_badan = req.body.tinggi_badan ?? req.body.height;
     const lingkar_kepala = req.body.lingkar_kepala ?? req.body.head_circumference ?? null;
@@ -132,12 +128,9 @@ async function createPemeriksaan(req, res, next) {
     if (!berat_badan || !tinggi_badan || !tanggal_pemeriksaan)
       return res.status(400).json({ success: false, message: 'berat_badan, tinggi_badan, tanggal_pemeriksaan wajib diisi.' });
 
-    // Hitung status gizi otomatis kalau tidak dikirim
     if (!status_gizi) {
       const [anakRows] = await pool.query('SELECT tanggal_lahir, jenis_kelamin FROM anak WHERE id = ?', [anakId]);
       if (anakRows[0]) {
-        const birth = new Date(anakRows[0].tanggal_lahir);
-        const umurBulan = Math.floor((new Date() - birth) / (1000 * 60 * 60 * 24 * 30));
         const bmi = parseFloat(berat_badan) / Math.pow(parseFloat(tinggi_badan) / 100, 2);
         if (bmi < 14) status_gizi = 'buruk';
         else if (bmi < 16) status_gizi = 'kurang';
@@ -145,7 +138,6 @@ async function createPemeriksaan(req, res, next) {
       }
     }
 
-    // bidanId dari JWT (req.user.bidanId diset saat login)
     const bidanId = req.user.bidanId;
     if (!bidanId)
       return res.status(400).json({ success: false, message: 'Akun ini tidak terdaftar sebagai bidan.' });
@@ -161,6 +153,43 @@ async function createPemeriksaan(req, res, next) {
       message: 'Pemeriksaan berhasil dicatat.',
       data: { id: result.insertId, anak_id: anakId, berat_badan, tinggi_badan, status_gizi, tanggal_pemeriksaan },
     });
+  } catch (err) { return next(err); }
+}
+
+// PUT /api/pemeriksaan/:id  — edit data pemeriksaan
+async function updatePemeriksaan(req, res, next) {
+  try {
+    const { berat_badan, tinggi_badan, lingkar_kepala, tanggal_pemeriksaan, catatan } = req.body;
+
+    if (!berat_badan || !tinggi_badan || !tanggal_pemeriksaan)
+      return res.status(400).json({ success: false, message: 'berat_badan, tinggi_badan, tanggal_pemeriksaan wajib diisi.' });
+
+    const [check] = await pool.query('SELECT id FROM pemeriksaan WHERE id = ?', [req.params.id]);
+    if (!check.length) return res.status(404).json({ success: false, message: 'Data pemeriksaan tidak ditemukan.' });
+
+    // Hitung ulang status gizi
+    const bmi = parseFloat(berat_badan) / Math.pow(parseFloat(tinggi_badan) / 100, 2);
+    let status_gizi = 'normal';
+    if (bmi < 14) status_gizi = 'buruk';
+    else if (bmi < 16) status_gizi = 'kurang';
+
+    await pool.query(
+      `UPDATE pemeriksaan SET berat_badan=?, tinggi_badan=?, lingkar_kepala=?, status_gizi=?, tanggal_pemeriksaan=?, catatan=? WHERE id=?`,
+      [berat_badan, tinggi_badan, lingkar_kepala || null, status_gizi, tanggal_pemeriksaan, catatan || null, req.params.id]
+    );
+
+    return res.json({ success: true, message: 'Data pemeriksaan berhasil diupdate.' });
+  } catch (err) { return next(err); }
+}
+
+// DELETE /api/pemeriksaan/:id — hapus data pemeriksaan
+async function deletePemeriksaan(req, res, next) {
+  try {
+    const [check] = await pool.query('SELECT id FROM pemeriksaan WHERE id = ?', [req.params.id]);
+    if (!check.length) return res.status(404).json({ success: false, message: 'Data pemeriksaan tidak ditemukan.' });
+
+    await pool.query('DELETE FROM pemeriksaan WHERE id = ?', [req.params.id]);
+    return res.json({ success: true, message: 'Data pemeriksaan berhasil dihapus.' });
   } catch (err) { return next(err); }
 }
 
@@ -190,4 +219,4 @@ async function grafikPertumbuhan(req, res, next) {
   } catch (err) { return next(err); }
 }
 
-module.exports = { listAnak, getAnak, createAnak, updateAnak, deleteAnak, createPemeriksaan, grafikPertumbuhan };
+module.exports = { listAnak, getAnak, createAnak, updateAnak, deleteAnak, createPemeriksaan, updatePemeriksaan, deletePemeriksaan, grafikPertumbuhan };

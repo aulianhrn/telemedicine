@@ -1,240 +1,192 @@
 // ===================== SETTINGS =====================
 
 const settingsPageHTML = `
-<div>
-    <div class="flex flex-wrap justify-between items-center mb-5">
-        <div>
-            <h2 class="text-headline-lg font-bold">Pengaturan</h2>
-            <p class="text-on-surface-variant">Kelola akun, notifikasi, keamanan, dan preferensi sistem</p>
-        </div>
+<style>
+.stt-wrap { display:flex; flex-direction:column; gap:12px; padding-bottom:32px; }
+.stt-header { margin-bottom:8px; }
+.stt-header h2 { font-size:22px; font-weight:600; color:#111827; margin:0 0 4px; }
+.stt-header p { font-size:13px; color:#6b7280; margin:0; }
+.stt-card { background:#fff; border:0.5px solid #e5e7eb; border-radius:14px; overflow:hidden; }
+.stt-profile-hero { display:flex; flex-direction:column; align-items:center; padding:28px 20px 20px; border-bottom:0.5px solid #f3f4f6; gap:10px; }
+.stt-avatar-circle { width:72px; height:72px; border-radius:50%; background:#dcfce7; display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:700; color:#166534; flex-shrink:0; overflow:hidden; background-size:cover; background-position:center; border:2.5px solid #bbf7d0; }
+.stt-profile-name { font-size:16px; font-weight:700; color:#111827; }
+.stt-badge { font-size:11px; font-weight:600; color:#166534; background:#dcfce7; border-radius:20px; padding:3px 12px; }
+.stt-btn-upload { font-size:12px; color:#16a34a; border:0.5px solid #86efac; padding:6px 14px; border-radius:8px; background:#f0fdf4; cursor:pointer; display:inline-flex; align-items:center; gap:5px; font-family:inherit; transition:background .15s; margin-top:2px; }
+.stt-btn-upload:hover { background:#dcfce7; }
+.stt-info-grid { display:grid; grid-template-columns:1fr 1fr; gap:0; }
+.stt-info-cell { padding:14px 20px; border-top:0.5px solid #f3f4f6; }
+.stt-info-cell:nth-child(odd) { border-right:0.5px solid #f3f4f6; }
+.stt-info-label { font-size:11px; font-weight:600; color:#9ca3af; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:4px; }
+.stt-info-value { font-size:14px; color:#111827; font-weight:500; }
+.stt-info-value.muted { color:#6b7280; font-weight:400; }
+.stt-section-header { display:flex; align-items:center; justify-content:space-between; padding:14px 20px; border-top:0.5px solid #f3f4f6; }
+.stt-section-header:first-child { border-top:none; }
+.stt-section-title { font-size:13px; font-weight:600; color:#374151; }
+.stt-btn-edit { font-size:12px; color:#16a34a; border:0.5px solid #86efac; padding:5px 12px; border-radius:8px; background:#f0fdf4; cursor:pointer; display:inline-flex; align-items:center; gap:5px; font-family:inherit; white-space:nowrap; transition:background .15s; }
+.stt-btn-edit:hover { background:#dcfce7; }
+.stt-edit-wrap { padding:16px 20px 20px; display:none; flex-direction:column; gap:12px; border-top:0.5px solid #f3f4f6; }
+.stt-edit-wrap.active { display:flex; }
+.stt-form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.stt-form-group { display:flex; flex-direction:column; gap:5px; }
+.stt-form-group label { font-size:11px; font-weight:600; color:#6b7280; text-transform:uppercase; letter-spacing:0.05em; }
+.stt-form-group input { font-size:13px; color:#111827; border:0.5px solid #d1d5db; border-radius:8px; padding:8px 12px; font-family:inherit; background:#fff; outline:none; transition:border .15s; }
+.stt-form-group input:focus { border-color:#4ade80; }
+.stt-form-group input[readonly] { background:#f9fafb; color:#9ca3af; }
+.stt-save-row { display:flex; justify-content:flex-end; gap:8px; padding-top:4px; }
+.stt-btn-cancel { font-size:13px; color:#6b7280; border:0.5px solid #e5e7eb; padding:8px 18px; border-radius:8px; background:#fff; cursor:pointer; font-family:inherit; }
+.stt-btn-save { font-size:13px; color:#fff; border:none; padding:8px 20px; border-radius:8px; background:#16a34a; cursor:pointer; font-family:inherit; font-weight:500; }
+.stt-btn-save:hover { background:#15803d; }
+.stt-pw-row { display:grid; grid-template-columns:1fr 1fr; gap:0; }
+.stt-pw-cell { padding:14px 20px; border-top:0.5px solid #f3f4f6; }
+.stt-pw-cell:first-child { border-right:0.5px solid #f3f4f6; }
+.stt-danger-row { display:flex; align-items:center; justify-content:space-between; padding:16px 20px; gap:12px; }
+.stt-danger-title { font-size:13px; font-weight:600; color:#dc2626; }
+.stt-danger-sub { font-size:12px; color:#9ca3af; margin-top:2px; }
+.stt-btn-danger { font-size:12px; color:#dc2626; border:0.5px solid #fca5a5; padding:7px 16px; border-radius:8px; background:#fef2f2; cursor:pointer; font-family:inherit; font-weight:500; }
+.stt-btn-danger:hover { background:#fee2e2; }
+.stt-toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(12px); background:#fff; border:0.5px solid #bbf7d0; border-radius:10px; padding:10px 18px; font-size:13px; color:#166534; display:flex; align-items:center; gap:8px; box-shadow:0 4px 16px rgba(0,0,0,.08); opacity:0; pointer-events:none; transition:opacity .2s,transform .2s; z-index:9999; }
+.stt-toast.show { opacity:1; transform:translateX(-50%) translateY(0); pointer-events:auto; }
+</style>
+
+<div class="stt-wrap">
+    <div class="stt-header">
+        <h2>Pengaturan</h2>
+        <p>Kelola akun dan keamanan</p>
     </div>
-    <div id="settingsToast" class="settings-toast">
-        <span class="material-symbols-outlined text-[18px]" style="color:#166534">check_circle</span>
+
+    <div id="settingsToast" class="stt-toast">
+        <span class="material-symbols-outlined" style="font-size:16px">check_circle</span>
         <span id="settingsToastMsg">Perubahan berhasil disimpan!</span>
     </div>
-    <div class="settings-tabs-mobile mb-4">
-        <button class="settings-tab-btn active whitespace-nowrap" data-tab="profil" onclick="switchSettingsTab('profil',this)">
-            <span class="material-symbols-outlined text-[16px]">person</span> Profil
-        </button>
-        <button class="settings-tab-btn whitespace-nowrap" data-tab="notifikasi" onclick="switchSettingsTab('notifikasi',this)">
-            <span class="material-symbols-outlined text-[16px]">notifications</span> Notifikasi
-        </button>
-        <button class="settings-tab-btn whitespace-nowrap" data-tab="keamanan" onclick="switchSettingsTab('keamanan',this)">
-            <span class="material-symbols-outlined text-[16px]">lock</span> Keamanan
-        </button>
-        <button class="settings-tab-btn whitespace-nowrap" data-tab="preferensi" onclick="switchSettingsTab('preferensi',this)">
-            <span class="material-symbols-outlined text-[16px]">tune</span> Preferensi
-        </button>
-    </div>
-    <div class="settings-layout">
-        <nav class="settings-tabs-desktop">
-            <button class="settings-tab-btn active" data-tab="profil" onclick="switchSettingsTab('profil',this)">
-                <span class="material-symbols-outlined text-[18px]">person</span> Profil
-            </button>
-            <button class="settings-tab-btn" data-tab="notifikasi" onclick="switchSettingsTab('notifikasi',this)">
-                <span class="material-symbols-outlined text-[18px]">notifications</span> Notifikasi
-            </button>
-            <button class="settings-tab-btn" data-tab="keamanan" onclick="switchSettingsTab('keamanan',this)">
-                <span class="material-symbols-outlined text-[18px]">lock</span> Keamanan
-            </button>
-            <button class="settings-tab-btn" data-tab="preferensi" onclick="switchSettingsTab('preferensi',this)">
-                <span class="material-symbols-outlined text-[18px]">tune</span> Preferensi
-            </button>
-        </nav>
-        <div>
 
-            <!-- PROFIL -->
-            <div id="settings-panel-profil" class="settings-panel active">
-                <div class="settings-card">
-                    <h3>Foto Profil</h3>
-                    <div style="display:flex;align-items:center;gap:16px;margin-bottom:4px">
-                        <div class="avatar-circle-settings" id="settingsAvatar">BA</div>
-                        <div style="display:flex;flex-direction:column;gap:8px">
-                            <label style="font-size:13px;color:#006e2f;border:1px solid #86efac;padding:7px 16px;border-radius:8px;background:transparent;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:6px">
-                                <span class="material-symbols-outlined text-[14px]">upload</span> Ganti Foto
-                                <input type="file" accept="image/*" style="display:none" onchange="previewFotoProfil(this)">
-                            </label>
-                            <span style="font-size:11px;color:#9ca3af">JPG, PNG maks 2MB</span>
-                        </div>
-                    </div>
+    <!-- CARD PROFIL -->
+    <div class="stt-card">
+
+        <!-- HERO: avatar + nama + badge + ganti foto -->
+        <div class="stt-profile-hero">
+            <div class="avatar-circle-settings stt-avatar-circle" id="settingsAvatar">BA</div>
+            <div class="stt-profile-name" id="sttAvatarName">—</div>
+            <span class="stt-badge" id="sttAvatarRole">Bidan</span>
+            <label class="stt-btn-upload">
+                <span class="material-symbols-outlined" style="font-size:14px">upload</span> Ganti Foto
+                <input type="file" accept="image/*" style="display:none" onchange="previewFotoProfil(this)">
+            </label>
+        </div>
+
+        <!-- HEADER INFORMASI -->
+        <div class="stt-section-header">
+            <span class="stt-section-title">Informasi Pribadi</span>
+            <button id="btnEditProfil" class="stt-btn-edit" onclick="toggleEditProfil(true)">
+                <span class="material-symbols-outlined" style="font-size:13px">edit</span> Edit
+            </button>
+        </div>
+
+        <!-- VIEW MODE: grid 2 kolom -->
+        <div id="profilView">
+            <div class="stt-info-grid">
+                <div class="stt-info-cell">
+                    <div class="stt-info-label">Nama Lengkap</div>
+                    <div class="stt-info-value" id="vNama">—</div>
                 </div>
-                <div class="settings-card">
-                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding-bottom:12px;border-bottom:0.5px solid #e5e7eb">
-                        <h3 style="margin:0;padding:0;border:none">Informasi Pribadi</h3>
-                        <button id="btnEditProfil" class="settings-btn-edit" onclick="toggleEditProfil(true)">
-                            <span class="material-symbols-outlined text-[14px]">edit</span> Edit
-                        </button>
-                    </div>
-
-                    <!-- VIEW MODE -->
-                    <div id="profilView" style="display:grid;grid-template-columns:1fr 1fr;gap:14px 24px">
-                        <div>
-                            <div style="font-size:11px;font-weight:500;color:#9ca3af;margin-bottom:3px;text-transform:uppercase;letter-spacing:0.04em">Nama Lengkap</div>
-                            <div style="font-size:13px;color:#111827" id="vNama">—</div>
-                        </div>
-                        <div>
-                            <div style="font-size:11px;font-weight:500;color:#9ca3af;margin-bottom:3px;text-transform:uppercase;letter-spacing:0.04em">Role</div>
-                            <div style="font-size:13px;color:#111827" id="vRole">Bidan</div>
-                        </div>
-                        <div>
-                            <div style="font-size:11px;font-weight:500;color:#9ca3af;margin-bottom:3px;text-transform:uppercase;letter-spacing:0.04em">Alamat Email</div>
-                            <div style="font-size:13px;color:#111827" id="vEmail">—</div>
-                        </div>
-                        <div>
-                            <div style="font-size:11px;font-weight:500;color:#9ca3af;margin-bottom:3px;text-transform:uppercase;letter-spacing:0.04em">No. Telepon</div>
-                            <div style="font-size:13px;color:#6b7280" id="vHp">—</div>
-                        </div>
-                    </div>
-
-                    <!-- EDIT MODE -->
-                    <div id="profilEdit" style="display:none">
-                        <div class="settings-form-row">
-                            <div class="settings-form-group">
-                                <label>Nama Lengkap</label>
-                                <input type="text" id="settingsNama">
-                            </div>
-                            <div class="settings-form-group">
-                                <label>Role</label>
-                                <input type="text" id="settingsRole" readonly style="background:#f9fafb">
-                            </div>
-                        </div>
-                        <div class="settings-form-group">
-                            <label>Alamat Email</label>
-                            <input type="email" id="settingsEmail" readonly style="background:#f9fafb">
-                        </div>
-                        <div class="settings-form-group">
-                            <label>No. Telepon</label>
-                            <input type="text" id="settingsHp">
-                        </div>
-                        <div class="settings-save-row">
-                            <button class="settings-btn-cancel" onclick="toggleEditProfil(false)">Batal</button>
-                            <button class="settings-btn-save" id="btnSimpanProfil" onclick="simpanProfil()">Simpan Perubahan</button>
-                        </div>
-                    </div>
+                <div class="stt-info-cell">
+                    <div class="stt-info-label">Role</div>
+                    <div class="stt-info-value" id="vRole">Bidan</div>
+                </div>
+                <div class="stt-info-cell">
+                    <div class="stt-info-label">Alamat Email</div>
+                    <div class="stt-info-value" id="vEmail">—</div>
+                </div>
+                <div class="stt-info-cell">
+                    <div class="stt-info-label">No. Telepon</div>
+                    <div class="stt-info-value muted" id="vHp">—</div>
                 </div>
             </div>
+        </div>
 
-            <!-- NOTIFIKASI -->
-            <div id="settings-panel-notifikasi" class="settings-panel">
-                <div class="settings-card">
-                    <h3>Notifikasi Aplikasi</h3>
-                    <div class="toggle-row">
-                        <div style="flex:1"><strong style="font-size:14px;font-weight:600;color:#111827;display:block">Jadwal Imunisasi</strong><span style="font-size:12px;color:#6b7280">Pengingat 1 hari sebelum jadwal</span></div>
-                        <label class="settings-toggle"><input type="checkbox" checked><span class="settings-toggle-track"></span></label>
-                    </div>
-                    <div class="toggle-row">
-                        <div style="flex:1"><strong style="font-size:14px;font-weight:600;color:#111827;display:block">Status Gizi Kritis</strong><span style="font-size:12px;color:#6b7280">Alert jika ada balita dengan gizi buruk</span></div>
-                        <label class="settings-toggle"><input type="checkbox" checked><span class="settings-toggle-track"></span></label>
-                    </div>
-                    <div class="toggle-row">
-                        <div style="flex:1"><strong style="font-size:14px;font-weight:600;color:#111827;display:block">Laporan Mingguan</strong><span style="font-size:12px;color:#6b7280">Ringkasan otomatis setiap Senin pagi</span></div>
-                        <label class="settings-toggle"><input type="checkbox" checked><span class="settings-toggle-track"></span></label>
-                    </div>
+        <div id="profilEdit" class="stt-edit-wrap">
+            <div class="stt-form-row">
+                <div class="stt-form-group">
+                    <label>Nama Lengkap</label>
+                    <input type="text" id="settingsNama">
                 </div>
-                <div class="settings-save-row">
-                    <button class="settings-btn-save" onclick="showSettingsToast('Preferensi notifikasi disimpan!')">Simpan Preferensi</button>
+                <div class="stt-form-group">
+                    <label>Role</label>
+                    <input type="text" id="settingsRole" readonly>
                 </div>
             </div>
-
-            <!-- KEAMANAN -->
-            <div id="settings-panel-keamanan" class="settings-panel">
-                <div class="settings-card">
-                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding-bottom:12px;border-bottom:0.5px solid #e5e7eb">
-                        <h3 style="margin:0;padding:0;border:none">Ubah Kata Sandi</h3>
-                        <button id="btnEditPw" class="settings-btn-edit" onclick="toggleEditPw(true)">
-                            <span class="material-symbols-outlined text-[14px]">edit</span> Edit
-                        </button>
-                    </div>
-
-                    <!-- VIEW MODE -->
-                    <div id="pwView" style="display:grid;grid-template-columns:1fr 1fr;gap:14px 24px">
-                        <div>
-                            <div style="font-size:11px;font-weight:500;color:#9ca3af;margin-bottom:3px;text-transform:uppercase;letter-spacing:0.04em">Kata Sandi</div>
-                            <div style="font-size:13px;color:#111827">••••••••••</div>
-                        </div>
-                        <div>
-                            <div style="font-size:11px;font-weight:500;color:#9ca3af;margin-bottom:3px;text-transform:uppercase;letter-spacing:0.04em">Terakhir Diubah</div>
-                            <div style="font-size:13px;color:#6b7280" id="vPwDate">Belum pernah diubah</div>
-                        </div>
-                    </div>
-
-                    <!-- EDIT MODE -->
-                    <div id="pwEdit" style="display:none">
-                        <div class="settings-form-group">
-                            <label>Kata Sandi Saat Ini</label>
-                            <input type="password" id="pwLama" placeholder="••••••••">
-                        </div>
-                        <div class="settings-form-row">
-                            <div class="settings-form-group">
-                                <label>Kata Sandi Baru</label>
-                                <input type="password" id="pwBaru" placeholder="Min. 6 karakter">
-                            </div>
-                            <div class="settings-form-group">
-                                <label>Konfirmasi</label>
-                                <input type="password" id="pwKonfirm" placeholder="Ulangi kata sandi">
-                            </div>
-                        </div>
-                        <div class="settings-save-row">
-                            <button class="settings-btn-cancel" onclick="toggleEditPw(false)">Batal</button>
-                            <button class="settings-btn-save" id="btnUbahPw" onclick="doChangePassword()">Ubah Kata Sandi</button>
-                        </div>
-                    </div>
-                </div>
-                <div class="settings-card">
-                    <h3>Keamanan Akun</h3>
-                    <div class="security-action-row">
-                        <div>
-                            <div style="font-size:14px;font-weight:600;color:#dc2626">Logout Semua Perangkat</div>
-                            <div style="font-size:12px;color:#6b7280;margin-top:2px">Keluar dari semua sesi aktif</div>
-                        </div>
-                        <button class="settings-btn-danger" onclick="doLogout()">Logout</button>
-                    </div>
-                </div>
+            <div class="stt-form-group">
+                <label>Alamat Email</label>
+                <input type="email" id="settingsEmail" readonly>
             </div>
-
-            <!-- PREFERENSI -->
-            <div id="settings-panel-preferensi" class="settings-panel">
-                <div class="settings-card">
-                    <h3>Tampilan</h3>
-                    <div class="pref-row">
-                        <div><strong style="font-size:14px;font-weight:600;color:#111827;display:block">Format Tanggal</strong><span style="font-size:12px;color:#6b7280">Cara penulisan tanggal</span></div>
-                        <select id="prefTanggal"><option value="dmy" selected>DD/MM/YYYY</option><option value="ymd">YYYY-MM-DD</option></select>
-                    </div>
-                    <div class="pref-row">
-                        <div><strong style="font-size:14px;font-weight:600;color:#111827;display:block">Zona Waktu</strong></div>
-                        <select id="prefZona"><option value="wib" selected>WIB (UTC+7)</option><option value="wita">WITA (UTC+8)</option><option value="wit">WIT (UTC+9)</option></select>
-                    </div>
-                </div>
-                <div class="settings-card">
-                    <h3>Sistem & Data</h3>
-                    <div class="pref-row">
-                        <div><strong style="font-size:14px;font-weight:600;color:#111827;display:block">Standar Grafik Tumbuh Kembang</strong><span style="font-size:12px;color:#6b7280">Referensi kurva pertumbuhan anak</span></div>
-                        <select><option selected>WHO (2006)</option><option>CDC (2000)</option><option>Kemenkes RI</option></select>
-                    </div>
-                    <div class="pref-row">
-                        <div><strong style="font-size:14px;font-weight:600;color:#111827;display:block">Auto-simpan Form</strong></div>
-                        <label class="settings-toggle"><input type="checkbox" checked><span class="settings-toggle-track"></span></label>
-                    </div>
-                </div>
-                <div class="settings-save-row">
-                    <button class="settings-btn-cancel" onclick="resetPreferensi()">Reset ke Default</button>
-                    <button class="settings-btn-save" onclick="simpanPreferensi()">Simpan Preferensi</button>
-                </div>
+            <div class="stt-form-group">
+                <label>No. Telepon</label>
+                <input type="text" id="settingsHp" placeholder="08xx-xxxx-xxxx">
             </div>
-
+            <div class="stt-save-row">
+                <button class="stt-btn-cancel" onclick="toggleEditProfil(false)">Batal</button>
+                <button class="stt-btn-save" id="btnSimpanProfil" onclick="simpanProfil()">Simpan Perubahan</button>
+            </div>
         </div>
     </div>
+
+    <!-- CARD KATA SANDI -->
+    <div class="stt-card">
+        <div class="stt-section-header">
+            <span class="stt-section-title">Kata Sandi</span>
+            <button id="btnEditPw" class="stt-btn-edit" onclick="toggleEditPw(true)">
+                <span class="material-symbols-outlined" style="font-size:13px">edit</span> Ubah
+            </button>
+        </div>
+
+        <div id="pwView">
+            <div class="stt-pw-row">
+                <div class="stt-pw-cell">
+                    <div class="stt-info-label">Kata Sandi</div>
+                    <div class="stt-info-value">••••••••••</div>
+                </div>
+                <div class="stt-pw-cell">
+                    <div class="stt-info-label">Terakhir Diubah</div>
+                    <div class="stt-info-value muted" id="vPwDate">Belum pernah diubah</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="pwEdit" class="stt-edit-wrap">
+            <div class="stt-form-group">
+                <label>Kata Sandi Saat Ini</label>
+                <input type="password" id="pwLama" placeholder="Masukkan kata sandi lama">
+            </div>
+            <div class="stt-form-row">
+                <div class="stt-form-group">
+                    <label>Kata Sandi Baru</label>
+                    <input type="password" id="pwBaru" placeholder="Min. 6 karakter">
+                </div>
+                <div class="stt-form-group">
+                    <label>Konfirmasi</label>
+                    <input type="password" id="pwKonfirm" placeholder="Ulangi kata sandi">
+                </div>
+            </div>
+            <div class="stt-save-row">
+                <button class="stt-btn-cancel" onclick="toggleEditPw(false)">Batal</button>
+                <button class="stt-btn-save" id="btnUbahPw" onclick="doChangePassword()">Ubah Kata Sandi</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CARD BAHAYA -->
+    <div class="stt-card">
+        <div class="stt-danger-row">
+            <div>
+                <div class="stt-danger-title">Logout Semua Perangkat</div>
+                <div class="stt-danger-sub">Keluar dari semua sesi yang sedang aktif</div>
+            </div>
+            <button class="stt-btn-danger" onclick="doLogout()">Logout</button>
+        </div>
+    </div>
+
 </div>`;
 
 let _snapProfil = {};
-
-// ── TAB ──
-window.switchSettingsTab = function (tabId, btn) {
-    document.querySelectorAll('.settings-panel').forEach(p => p.classList.remove('active'));
-    document.querySelectorAll('.settings-tab-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById('settings-panel-' + tabId)?.classList.add('active');
-    document.querySelectorAll(`[data-tab="${tabId}"]`).forEach(b => b.classList.add('active'));
-};
 
 // ── TOAST ──
 window.showSettingsToast = function (msg = 'Perubahan berhasil disimpan!') {
@@ -267,16 +219,9 @@ window.previewFotoProfil = function (input) {
     const reader = new FileReader();
     reader.onload = function (e) {
         const dataUrl = e.target.result;
-
-        // Update avatar di settings page
         applyAvatarPhoto(document.getElementById('settingsAvatar'), dataUrl);
-
-        // Update avatar di topbar
         applyAvatarPhoto(document.getElementById('topbarUserInitials'), dataUrl);
-
-        // Simpan ke localStorage agar tidak hilang saat refresh
         try { localStorage.setItem('pos_avatar', dataUrl); } catch (err) {}
-
         showSettingsToast('Foto profil diperbarui!');
     };
     reader.readAsDataURL(file);
@@ -294,14 +239,14 @@ window.toggleEditProfil = function (on) {
             hp:   document.getElementById('settingsHp')?.value   || ''
         };
         if (view)    view.style.display    = 'none';
-        if (edit)    edit.style.display    = 'block';
+        if (edit)    { edit.style.display = 'flex'; edit.classList.add('active'); }
         if (btnEdit) btnEdit.style.display = 'none';
         document.getElementById('settingsNama')?.focus();
     } else {
         if (document.getElementById('settingsNama')) document.getElementById('settingsNama').value = _snapProfil.nama;
         if (document.getElementById('settingsHp'))   document.getElementById('settingsHp').value   = _snapProfil.hp;
-        if (edit)    edit.style.display    = 'none';
-        if (view)    view.style.display    = 'grid';
+        if (edit)    { edit.style.display = 'none'; edit.classList.remove('active'); }
+        if (view)    view.style.display    = 'block';
         if (btnEdit) btnEdit.style.display = 'inline-flex';
     }
 };
@@ -322,21 +267,17 @@ window.simpanProfil = async function () {
     user.no_hp = hp;
     localStorage.setItem('pos_user', JSON.stringify(user));
 
-    // Update topbar nama & inisial
     const initials = nama.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
     const topbarName     = document.getElementById('topbarUserName');
     const topbarInitials = document.getElementById('topbarUserInitials');
     if (topbarName) topbarName.textContent = nama;
-    // Hanya update teks inisial jika topbar belum pakai foto
     if (topbarInitials && !localStorage.getItem('pos_avatar')) {
         topbarInitials.textContent = initials;
     }
 
-    // Update avatar settings jika belum pakai foto
     const av = document.getElementById('settingsAvatar');
     if (av && !localStorage.getItem('pos_avatar')) av.textContent = initials;
 
-    // Update view mode
     const vNama = document.getElementById('vNama');
     const vHp   = document.getElementById('vHp');
     if (vNama) vNama.textContent = nama;
@@ -346,8 +287,13 @@ window.simpanProfil = async function () {
     btn.disabled = false;
 
     document.getElementById('profilEdit').style.display = 'none';
-    document.getElementById('profilView').style.display = 'grid';
+    document.getElementById('profilEdit').classList.remove('active');
+    document.getElementById('profilView').style.display = 'block';
     document.getElementById('btnEditProfil').style.display = 'inline-flex';
+
+    // Update avatar name & role badge in card
+    const sttName = document.getElementById('sttAvatarName');
+    if (sttName) sttName.textContent = nama;
 
     showSettingsToast('Profil berhasil disimpan!');
 };
@@ -360,7 +306,7 @@ window.toggleEditPw = function (on) {
 
     if (on) {
         if (view)    view.style.display    = 'none';
-        if (edit)    edit.style.display    = 'block';
+        if (edit)    { edit.style.display = 'flex'; edit.classList.add('active'); }
         if (btnEdit) btnEdit.style.display = 'none';
         document.getElementById('pwLama')?.focus();
     } else {
@@ -368,8 +314,8 @@ window.toggleEditPw = function (on) {
             const el = document.getElementById(id);
             if (el) el.value = '';
         });
-        if (edit)    edit.style.display    = 'none';
-        if (view)    view.style.display    = 'grid';
+        if (edit)    { edit.style.display = 'none'; edit.classList.remove('active'); }
+        if (view)    view.style.display    = 'block';
         if (btnEdit) btnEdit.style.display = 'inline-flex';
     }
 };
@@ -411,28 +357,10 @@ window.doChangePassword = async function () {
     }
 };
 
-// ── PREFERENSI ──
-window.simpanPreferensi = function () {
-    const tanggal = document.getElementById('prefTanggal')?.value;
-    const zona    = document.getElementById('prefZona')?.value;
-    localStorage.setItem('pref_tanggal', tanggal);
-    localStorage.setItem('pref_zona',    zona);
-    showSettingsToast('Preferensi berhasil disimpan!');
-};
-
-window.resetPreferensi = function () {
-    const t = document.getElementById('prefTanggal');
-    const z = document.getElementById('prefZona');
-    if (t) t.value = 'dmy';
-    if (z) z.value = 'wib';
-    showSettingsToast('Preferensi direset ke default!');
-};
-
 // ── INIT: isi semua field dari localStorage ──
 function fillSettingsProfile() {
     const user = JSON.parse(localStorage.getItem('pos_user') || '{}');
 
-    // Form inputs (edit mode)
     const n = document.getElementById('settingsNama');
     const r = document.getElementById('settingsRole');
     const e = document.getElementById('settingsEmail');
@@ -442,7 +370,6 @@ function fillSettingsProfile() {
     if (e) e.value = user.email || '';
     if (h) h.value = user.no_hp || '';
 
-    // View mode fields
     const vNama  = document.getElementById('vNama');
     const vRole  = document.getElementById('vRole');
     const vEmail = document.getElementById('vEmail');
@@ -452,7 +379,12 @@ function fillSettingsProfile() {
     if (vEmail) vEmail.textContent = user.email || '—';
     if (vHp)    { vHp.textContent = user.no_hp || '—'; vHp.style.color = user.no_hp ? '#111827' : '#6b7280'; }
 
-    // Avatar — cek foto tersimpan dulu, fallback ke inisial
+    // Avatar card name + role
+    const sttName = document.getElementById('sttAvatarName');
+    const sttRole = document.getElementById('sttAvatarRole');
+    if (sttName) sttName.textContent = user.nama || '—';
+    if (sttRole) sttRole.textContent = user.role === 'admin' ? 'Administrator' : 'Bidan';
+
     const savedAvatar = localStorage.getItem('pos_avatar');
     const av = document.getElementById('settingsAvatar');
     if (savedAvatar) {
@@ -461,16 +393,9 @@ function fillSettingsProfile() {
         av.style.backgroundImage = '';
         av.textContent = (user.nama || 'BA').split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
     }
-
-    // Preferensi tersimpan
-    const t = document.getElementById('prefTanggal');
-    const z = document.getElementById('prefZona');
-    if (t && localStorage.getItem('pref_tanggal')) t.value = localStorage.getItem('pref_tanggal');
-    if (z && localStorage.getItem('pref_zona'))    z.value = localStorage.getItem('pref_zona');
 }
 
 // ── LOAD FOTO KE TOPBAR saat app pertama kali init ──
-// Panggil fungsi ini di tempat kamu menginisialisasi app (setelah login / render topbar)
 window.loadAvatarToTopbar = function () {
     const savedAvatar = localStorage.getItem('pos_avatar');
     if (savedAvatar) {

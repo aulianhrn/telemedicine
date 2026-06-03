@@ -12,22 +12,21 @@ const loginPageHTML = `
                 <p class="text-body-md text-on-surface-variant">Masuk dengan akun Anda untuk mengakses portal.</p>
             </div>
             <div id="loginError" class="hidden mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm font-medium"></div>
-            <form id="loginForm">
+            <form id="loginForm" autocomplete="off">
                 <div class="mb-4">
-                    <label class="text-label-md text-on-surface-variant uppercase tracking-wider block mb-1">Email / NIP</label>
+                    <label class="text-label-md text-on-surface-variant uppercase tracking-wider block mb-1">Email</label>
                     <div class="relative">
                         <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline">mail</span>
-                        <input type="email" id="loginEmail" class="w-full pl-12 pr-4 py-3 rounded-lg border border-outline-variant bg-surface focus:ring-2 focus:ring-primary-container focus:border-primary outline-none" placeholder="bidan@posyandu.com" value="bidan@posyandu.com">
+                        <input type="email" id="loginEmail" autocomplete="off" class="w-full pl-12 pr-4 py-3 rounded-lg border border-outline-variant bg-surface focus:ring-2 focus:ring-primary-container focus:border-primary outline-none" placeholder="Masukkan email Anda">
                     </div>
                 </div>
                 <div class="mb-4">
                     <div class="flex justify-between items-center mb-1">
                         <label class="text-label-md text-on-surface-variant uppercase tracking-wider">Kata Sandi</label>
-                        <a href="#" class="text-label-md text-primary hover:underline">Lupa kata sandi?</a>
                     </div>
                     <div class="relative">
                         <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline">lock</span>
-                        <input type="password" id="loginPasswordInput" class="w-full pl-12 pr-12 py-3 rounded-lg border border-outline-variant bg-surface focus:ring-2 focus:ring-primary-container focus:border-primary outline-none" placeholder="••••••••" value="pass123">
+                        <input type="password" id="loginPasswordInput" autocomplete="new-password" class="w-full pl-12 pr-12 py-3 rounded-lg border border-outline-variant bg-surface focus:ring-2 focus:ring-primary-container focus:border-primary outline-none" placeholder="Masukkan kata sandi">
                         <button type="button" onclick="togglePasswordVisibility()" class="absolute right-4 top-1/2 -translate-y-1/2 text-outline hover:text-on-surface transition-colors">
                             <span id="passwordEyeIcon" class="material-symbols-outlined">visibility</span>
                         </button>
@@ -35,25 +34,20 @@ const loginPageHTML = `
                 </div>
                 <div class="flex items-center gap-2 mb-6">
                     <input type="checkbox" id="remember" class="w-5 h-5 rounded border-outline-variant accent-green-700">
-                    <label for="remember" class="text-body-sm text-on-surface-variant">Tetap masuk selama 30 hari</label>
+                    <label for="remember" class="text-body-sm text-on-surface-variant">Ingat pengguna</label>
                 </div>
                 <button type="submit" id="loginBtn" class="w-full py-4 bg-primary text-on-primary rounded-lg font-headline-sm hover:bg-green-800 transition-all active:scale-[0.98] shadow-lg shadow-primary/20">
                     Masuk
                 </button>
             </form>
-            <div class="relative py-6">
-                <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-outline-variant"></div></div>
-                <div class="relative flex justify-center"><span class="bg-surface-container-lowest px-4 text-outline text-label-md">ATAU MASUK DENGAN</span></div>
-            </div>
-            <button type="button" class="flex items-center justify-center gap-2 py-3 border border-outline-variant rounded-lg hover:bg-surface transition-colors text-sm font-medium text-on-surface-variant w-full">
-                <img src="https://www.google.com/favicon.ico" class="w-5 h-5" alt="Google"> Masuk dengan Google
-            </button>
-            <p class="text-xs text-center text-on-surface-variant mt-3">Login SSO memerlukan akun dari jaringan Puskesmas / Dinas Kesehatan setempat.</p>
-            <footer class="mt-6 pt-6 border-t border-outline-variant text-center">
-                <p class="text-body-sm text-on-surface-variant">
-                    Belum punya akun admin?
-                    <a href="#" class="text-primary font-bold hover:underline">Hubungi Dinas Kesehatan</a>
-                </p>
+            <footer class="mt-8 pt-6 border-t border-outline-variant">
+                <div class="flex justify-center gap-4 text-xs text-on-surface-variant">
+                    <a href="#" class="hover:text-primary">Kebijakan Privasi</a>
+                    <span>•</span>
+                    <a href="#" class="hover:text-primary">Syarat &amp; Ketentuan</a>
+                    <span>•</span>
+                    <a href="#" class="hover:text-primary">Bantuan</a>
+                </div>
             </footer>
         </div>
         <div class="hidden md:block relative bg-surface-container overflow-hidden">
@@ -81,11 +75,6 @@ const loginPageHTML = `
             <img src="https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=800&h=600&fit=crop" class="absolute inset-0 w-full h-full object-cover opacity-30 mix-blend-multiply" alt="Healthcare">
         </div>
     </div>
-    <div class="fixed bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-4 text-xs text-outline">
-        <a href="#" class="hover:text-primary">Kebijakan Privasi</a> •
-        <a href="#" class="hover:text-primary">Syarat & Ketentuan</a> •
-        <a href="#" class="hover:text-primary">Bantuan</a>
-    </div>
 `;
 
 window.togglePasswordVisibility = function () {
@@ -100,6 +89,7 @@ async function doLogin(e) {
     e.preventDefault();
     const email = document.getElementById('loginEmail').value.trim();
     const password = document.getElementById('loginPasswordInput').value;
+    const remember = document.getElementById('remember').checked;
     const errEl = document.getElementById('loginError');
     const btn = document.getElementById('loginBtn');
 
@@ -115,6 +105,13 @@ async function doLogin(e) {
         });
         const data = await res.json();
         if (data.success) {
+            // Simpan atau hapus email berdasarkan checkbox
+            if (remember) {
+                localStorage.setItem('pos_saved_email', email);
+            } else {
+                localStorage.removeItem('pos_saved_email');
+            }
+
             localStorage.setItem('pos_token', data.data.token);
             localStorage.setItem('pos_user', JSON.stringify(data.data.user));
             showLoggedInUI();
@@ -134,6 +131,22 @@ async function doLogin(e) {
 function renderLoginPage() {
     const container = document.getElementById('viewContainer');
     if (container) container.innerHTML = loginPageHTML;
+
+    // Force clear autofill dulu, baru isi kalau ada email tersimpan
+    setTimeout(() => {
+        const emailInput = document.getElementById('loginEmail');
+        const passwordInput = document.getElementById('loginPasswordInput');
+        if (emailInput) emailInput.value = '';
+        if (passwordInput) passwordInput.value = '';
+
+        const savedEmail = localStorage.getItem('pos_saved_email');
+        if (savedEmail) {
+            if (emailInput) emailInput.value = savedEmail;
+            const rememberCheck = document.getElementById('remember');
+            if (rememberCheck) rememberCheck.checked = true;
+        }
+    }, 100);
+
     const form = document.getElementById('loginForm');
     if (form) form.addEventListener('submit', doLogin);
 }
