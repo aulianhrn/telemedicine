@@ -11,4 +11,4 @@ RUN echo "=== FILES ===" && find /app -name "server.js"
 
 EXPOSE 5000
 
-CMD ["node", "src/server.js"]
+CMD ["node", "backend/src/server.js"]
