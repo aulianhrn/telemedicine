@@ -91,8 +91,8 @@ function getDashboardHTML() {
                         <tr>
                             <th class="p-4 text-left text-sm">Nama Anak</th>
                             <th class="p-4 text-left text-sm">Nama Ibu</th>
-                            <th class="p-4 text-left text-sm">Tgl Lahir</th>
-                            <th class="p-4 text-left text-sm">JK</th>
+                            <th class="p-4 text-left text-sm">Tanggal Lahir</th>
+                            <th class="p-4 text-left text-sm">Jenis Kelamin</th>
                         </tr>
                     </thead>
                     <tbody id="dashAnakTable">

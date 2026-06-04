@@ -10,16 +10,25 @@ const settingsPageHTML = `
 .stt-profile-hero { display:flex; flex-direction:column; align-items:center; padding:28px 20px 20px; border-bottom:0.5px solid #f3f4f6; gap:10px; }
 .stt-avatar-wrap { position:relative; display:inline-flex; }
 .stt-avatar-circle { width:80px; height:80px; border-radius:50%; background:#dcfce7; display:flex; align-items:center; justify-content:center; font-size:24px; font-weight:700; color:#166534; flex-shrink:0; overflow:hidden; background-size:cover; background-position:center; border:2.5px solid #bbf7d0; }
-.stt-avatar-overlay { position:absolute; inset:0; border-radius:50%; background:rgba(0,0,0,0); display:flex; align-items:center; justify-content:center; opacity:0; transition:opacity .2s,background .2s; cursor:pointer; }
-.stt-avatar-wrap:hover .stt-avatar-overlay { background:rgba(0,0,0,.38); opacity:1; }
-.stt-avatar-overlay span { color:#fff; font-size:18px; }
+
+/* Nama + pensil */
+.stt-name-row { display:flex; align-items:center; gap:6px; position:relative; }
 .stt-profile-name { font-size:16px; font-weight:700; color:#111827; }
+.stt-pencil-btn { width:24px; height:24px; border-radius:50%; background:#f0fdf4; border:0.5px solid #86efac; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; transition:background .15s; }
+.stt-pencil-btn:hover { background:#dcfce7; }
+.stt-pencil-btn span { font-size:13px; color:#16a34a; }
+
+/* Dropdown foto */
+.stt-photo-dropdown { position:absolute; top:calc(100% + 6px); left:50%; transform:translateX(-50%); background:#fff; border:0.5px solid #e5e7eb; border-radius:10px; box-shadow:0 4px 16px rgba(0,0,0,.10); z-index:100; min-width:160px; overflow:hidden; display:none; flex-direction:column; }
+.stt-photo-dropdown.open { display:flex; }
+.stt-dropdown-item { display:flex; align-items:center; gap:8px; padding:10px 14px; font-size:13px; cursor:pointer; transition:background .12s; border:none; background:none; font-family:inherit; width:100%; text-align:left; }
+.stt-dropdown-item:hover { background:#f9fafb; }
+.stt-dropdown-item.danger { color:#dc2626; }
+.stt-dropdown-item.danger:hover { background:#fef2f2; }
+.stt-dropdown-item span { font-size:15px; }
+.stt-dropdown-divider { height:0.5px; background:#f3f4f6; margin:2px 0; }
+
 .stt-badge { font-size:11px; font-weight:600; color:#166534; background:#dcfce7; border-radius:20px; padding:3px 12px; }
-.stt-photo-actions { display:flex; gap:8px; margin-top:2px; }
-.stt-btn-upload { font-size:12px; color:#16a34a; border:0.5px solid #86efac; padding:6px 14px; border-radius:8px; background:#f0fdf4; cursor:pointer; display:inline-flex; align-items:center; gap:5px; font-family:inherit; transition:background .15s; }
-.stt-btn-upload:hover { background:#dcfce7; }
-.stt-btn-remove-photo { font-size:12px; color:#dc2626; border:0.5px solid #fca5a5; padding:6px 14px; border-radius:8px; background:#fef2f2; cursor:pointer; display:inline-flex; align-items:center; gap:5px; font-family:inherit; transition:background .15s; }
-.stt-btn-remove-photo:hover { background:#fee2e2; }
 
 /* Preview modal */
 .stt-preview-modal { position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:9998; display:none; align-items:center; justify-content:center; padding:20px; }
@@ -82,6 +91,9 @@ const settingsPageHTML = `
     </div>
 </div>
 
+<!-- Input file tersembunyi -->
+<input type="file" id="sttFileInput" accept="image/*" style="display:none" onchange="previewFotoProfil(this)">
+
 <div class="stt-wrap">
     <div class="stt-header">
         <h2>Pengaturan</h2>
@@ -96,30 +108,37 @@ const settingsPageHTML = `
     <!-- CARD PROFIL -->
     <div class="stt-card">
 
-        <!-- HERO: avatar + nama + badge + ganti foto -->
+        <!-- HERO: avatar + nama + pensil dropdown -->
         <div class="stt-profile-hero">
-            <!-- Avatar dengan overlay kamera saat hover -->
             <div class="stt-avatar-wrap">
                 <div class="stt-avatar-circle" id="settingsAvatar">BA</div>
-                <label class="stt-avatar-overlay" title="Ganti foto">
-                    <span class="material-symbols-outlined">photo_camera</span>
-                    <input type="file" accept="image/*" style="display:none" onchange="previewFotoProfil(this)">
-                </label>
             </div>
-            <div class="stt-profile-name" id="sttAvatarName">—</div>
-            <span class="stt-badge" id="sttAvatarRole">Bidan</span>
 
-            <!-- Tombol aksi foto -->
-            <div class="stt-photo-actions">
-                <label class="stt-btn-upload">
-                    <span class="material-symbols-outlined" style="font-size:14px">upload</span> Ganti Foto
-                    <input type="file" accept="image/*" style="display:none" onchange="previewFotoProfil(this)">
-                </label>
-                <button id="btnHapusFoto" class="stt-btn-remove-photo" onclick="hapusFotoProfil()" style="display:none">
-                    <span class="material-symbols-outlined" style="font-size:14px">delete</span> Hapus Foto
+            <!-- Nama + ikon pensil -->
+            <div class="stt-name-row">
+                <div class="stt-profile-name" id="sttAvatarName">—</div>
+                <button class="stt-pencil-btn" onclick="togglePhotoDropdown(event)" title="Ubah foto profil">
+                    <span class="material-symbols-outlined">edit</span>
                 </button>
+                <!-- Dropdown -->
+                <div class="stt-photo-dropdown" id="sttPhotoDropdown">
+                    <label class="stt-dropdown-item" onclick="sttPhotoDropdown.classList.remove('open')">
+                        <span class="material-symbols-outlined">upload</span> Ganti Foto
+                        <input type="file" accept="image/*" style="display:none" onchange="previewFotoProfil(this)">
+                    </label>
+                    <div class="stt-dropdown-divider"></div>
+                    <button class="stt-dropdown-item danger" id="sttDropdownHapus" onclick="closePhotoDropdown(); hapusFotoProfil();" style="display:none">
+                        <span class="material-symbols-outlined">delete</span> Hapus Foto
+                    </button>
+                    <div class="stt-dropdown-divider" id="sttDropdownDivider2" style="display:none"></div>
+                    <button class="stt-dropdown-item" onclick="closePhotoDropdown()">
+                        <span class="material-symbols-outlined">close</span> Batal
+                    </button>
+                </div>
             </div>
-            <span style="font-size:11px;color:#9ca3af">JPG, PNG maks 2MB</span>
+
+            <span class="stt-badge" id="sttAvatarRole">Bidan</span>
+            <span style="font-size:11px;color:#9ca3af">Klik ikon pensil untuk ubah foto</span>
         </div>
 
         <!-- HEADER INFORMASI -->
@@ -237,7 +256,7 @@ const settingsPageHTML = `
 </div>`;
 
 let _snapProfil = {};
-let _pendingPhotoFile = null; // file yang belum dikonfirmasi
+let _pendingPhotoFile = null;
 
 // ── TOAST ──
 window.showSettingsToast = function (msg = 'Perubahan berhasil disimpan!') {
@@ -249,6 +268,34 @@ window.showSettingsToast = function (msg = 'Perubahan berhasil disimpan!') {
     clearTimeout(t._timer);
     t._timer = setTimeout(() => t.classList.remove('show'), 2500);
 };
+
+// ── DROPDOWN FOTO ──
+window.togglePhotoDropdown = function (e) {
+    e.stopPropagation();
+    const dd = document.getElementById('sttPhotoDropdown');
+    dd.classList.toggle('open');
+};
+window.closePhotoDropdown = function () {
+    const dd = document.getElementById('sttPhotoDropdown');
+    if (dd) dd.classList.remove('open');
+};
+// Klik di luar → tutup dropdown
+document.addEventListener('click', function (e) {
+    const dd = document.getElementById('sttPhotoDropdown');
+    if (dd && !dd.contains(e.target) && !e.target.closest('.stt-pencil-btn')) {
+        dd.classList.remove('open');
+    }
+});
+
+// ── HELPER: update visibilitas tombol Hapus di dropdown ──
+function updateHapusFotoBtn() {
+    const btnHapus  = document.getElementById('sttDropdownHapus');
+    const divider2  = document.getElementById('sttDropdownDivider2');
+    const user = JSON.parse(localStorage.getItem('pos_user') || '{}');
+    const hasPhoto = !!(user.avatar || localStorage.getItem('pos_avatar'));
+    if (btnHapus)  btnHapus.style.display  = hasPhoto ? 'flex' : 'none';
+    if (divider2)  divider2.style.display  = hasPhoto ? 'block' : 'none';
+}
 
 // ── HELPER: terapkan foto ke elemen avatar ──
 function applyAvatarPhoto(el, src) {
@@ -269,19 +316,11 @@ function resetAvatarToInitials(el, nama) {
     el.textContent = initials;
 }
 
-// ── HELPER: toggle tombol hapus foto ──
-function updateHapusFotoBtn() {
-    const btn = document.getElementById('btnHapusFoto');
-    if (!btn) return;
-    const user = JSON.parse(localStorage.getItem('pos_user') || '{}');
-    const hasPhoto = !!(user.avatar || localStorage.getItem('pos_avatar'));
-    btn.style.display = hasPhoto ? 'inline-flex' : 'none';
-}
-
 // ── PREVIEW FOTO (sebelum upload) ──
 window.previewFotoProfil = function (input) {
     if (!input.files || !input.files[0]) return;
     const file = input.files[0];
+    closePhotoDropdown();
     if (file.size > 2 * 1024 * 1024) {
         showGlobalToast('Ukuran file maksimal 2MB!', true);
         return;
@@ -295,7 +334,6 @@ window.previewFotoProfil = function (input) {
         document.body.style.overflow = 'hidden';
     };
     reader.readAsDataURL(file);
-    // Reset input agar file yang sama bisa dipilih lagi
     input.value = '';
 };
 
@@ -327,17 +365,12 @@ window.konfirmasiUploadFoto = async function () {
     btn.disabled = false;
 
     if (res?.success) {
-        // Simpan URL server ke user di localStorage
         const user = JSON.parse(localStorage.getItem('pos_user') || '{}');
         user.avatar = res.avatar;
         localStorage.setItem('pos_user', JSON.stringify(user));
-        // Hapus base64 lama
         localStorage.removeItem('pos_avatar');
 
-        // Build full URL
         const avatarSrc = res.avatar.startsWith('http') ? res.avatar : SERVER_URL + res.avatar;
-
-        // Update semua elemen avatar
         applyAvatarPhoto(document.getElementById('settingsAvatar'), avatarSrc);
         applyAvatarPhoto(document.getElementById('topbarUserInitials'), avatarSrc);
 
@@ -356,20 +389,16 @@ window.hapusFotoProfil = async function () {
     if (!confirm('Hapus foto profil? Foto akan diganti dengan inisial nama.')) return;
 
     const token = localStorage.getItem('pos_token');
-
-    // Panggil endpoint hapus avatar di server
     const res = await fetch(BASE_URL + '/auth/avatar', {
         method: 'DELETE',
         headers: { Authorization: 'Bearer ' + token }
     }).then(r => r.json()).catch(() => null);
 
-    // Hapus dari localStorage apapun hasilnya (tetap bersihkan lokal)
     const user = JSON.parse(localStorage.getItem('pos_user') || '{}');
     delete user.avatar;
     localStorage.setItem('pos_user', JSON.stringify(user));
     localStorage.removeItem('pos_avatar');
 
-    // Reset avatar ke inisial
     const nama = user.nama || '';
     resetAvatarToInitials(document.getElementById('settingsAvatar'), nama);
     resetAvatarToInitials(document.getElementById('topbarUserInitials'), nama);
@@ -413,6 +442,21 @@ window.simpanProfil = async function () {
     btn.textContent = 'Menyimpan...';
     btn.disabled = true;
 
+    const token = localStorage.getItem('pos_token');
+    const res = await fetch(BASE_URL + '/auth/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+        body: JSON.stringify({ nama, no_hp: hp })
+    }).then(r => r.json()).catch(() => null);
+
+    btn.textContent = 'Simpan Perubahan';
+    btn.disabled = false;
+
+    if (!res?.success) {
+        showGlobalToast(res?.message || 'Gagal menyimpan profil', true);
+        return;
+    }
+
     const user = JSON.parse(localStorage.getItem('pos_user') || '{}');
     user.nama  = nama;
     user.no_hp = hp;
@@ -422,8 +466,6 @@ window.simpanProfil = async function () {
     const topbarName     = document.getElementById('topbarUserName');
     const topbarInitials = document.getElementById('topbarUserInitials');
     if (topbarName) topbarName.textContent = nama;
-
-    // Update inisial topbar hanya jika belum ada foto
     if (topbarInitials && !user.avatar && !localStorage.getItem('pos_avatar')) {
         topbarInitials.textContent = initials;
     }
@@ -436,16 +478,13 @@ window.simpanProfil = async function () {
     if (vNama) vNama.textContent = nama;
     if (vHp)   { vHp.textContent = hp || '—'; vHp.style.color = hp ? '#111827' : '#6b7280'; }
 
-    btn.textContent = 'Simpan Perubahan';
-    btn.disabled = false;
+    const sttName = document.getElementById('sttAvatarName');
+    if (sttName) sttName.textContent = nama;
 
     document.getElementById('profilEdit').style.display = 'none';
     document.getElementById('profilEdit').classList.remove('active');
     document.getElementById('profilView').style.display = 'block';
     document.getElementById('btnEditProfil').style.display = 'inline-flex';
-
-    const sttName = document.getElementById('sttAvatarName');
-    if (sttName) sttName.textContent = nama;
 
     showSettingsToast('Profil berhasil disimpan!');
 };
@@ -536,7 +575,6 @@ function fillSettingsProfile() {
     if (sttName) sttName.textContent = user.nama || '—';
     if (sttRole) sttRole.textContent = user.role === 'admin' ? 'Administrator' : 'Bidan';
 
-    // Load avatar — prioritas: server URL > base64 lama > inisial
     const av = document.getElementById('settingsAvatar');
     if (user.avatar) {
         const src = user.avatar.startsWith('http') ? user.avatar : SERVER_URL + user.avatar;
@@ -554,7 +592,7 @@ function fillSettingsProfile() {
     updateHapusFotoBtn();
 }
 
-// ── LOAD FOTO KE TOPBAR saat app pertama kali init ──
+// ── LOAD FOTO KE TOPBAR ──
 window.loadAvatarToTopbar = function () {
     const user = JSON.parse(localStorage.getItem('pos_user') || '{}');
     if (user.avatar) {

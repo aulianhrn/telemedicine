@@ -53,9 +53,8 @@ window.loadRekap = async function () {
     
     const d = res.data;
 
-    // Hanya menampilkan 4 card data rekap (tanpa card bawah "Rekap Juni 2026")
     el.innerHTML = `
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
             <div class="bg-surface-container-lowest p-5 rounded-xl border">
                 <span class="material-symbols-outlined text-primary bg-primary/10 p-2 rounded-lg block w-fit">stethoscope</span>
                 <p class="text-on-surface-variant mt-3 text-sm">Total Pemeriksaan</p>
@@ -70,6 +69,11 @@ window.loadRekap = async function () {
                 <span class="material-symbols-outlined text-yellow-600 bg-yellow-50 p-2 rounded-lg block w-fit">warning</span>
                 <p class="text-on-surface-variant mt-3 text-sm">Gizi Kurang</p>
                 <p class="text-3xl font-bold mt-1">${d.status_gizi?.kurang || 0}</p>
+            </div>
+            <div class="bg-surface-container-lowest p-5 rounded-xl border">
+                <span class="material-symbols-outlined text-red-600 bg-red-50 p-2 rounded-lg block w-fit">dangerous</span>
+                <p class="text-on-surface-variant mt-3 text-sm">Gizi Buruk</p>
+                <p class="text-3xl font-bold mt-1">${d.status_gizi?.buruk || 0}</p>
             </div>
             <div class="bg-surface-container-lowest p-5 rounded-xl border">
                 <span class="material-symbols-outlined text-secondary bg-secondary/10 p-2 rounded-lg block w-fit">vaccines</span>

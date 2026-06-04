@@ -120,7 +120,7 @@ async function doLogin(e) {
             errEl.classList.remove('hidden');
         }
     } catch {
-        errEl.textContent = 'Tidak bisa terhubung ke server backend.';
+        errEl.textContent = 'Tidak bisa terhubung ke server. Pastikan backend berjalan di localhost:5000';
         errEl.classList.remove('hidden');
     }
 

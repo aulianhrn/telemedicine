@@ -36,8 +36,6 @@ function closeModal(id) {
     document.body.style.overflow = '';
 }
 
-// ── AVATAR HELPER ──
-// Terapkan foto ke elemen avatar (topbar atau settings)
 function applyAvatarPhoto(el, src) {
     if (!el || !src) return;
     el.style.backgroundImage = `url(${src})`;
@@ -46,15 +44,12 @@ function applyAvatarPhoto(el, src) {
     el.textContent = '';
 }
 
-// Load avatar dari data user (dari server), dipanggil saat login & init
 window.loadAvatarToTopbar = function () {
     const user = JSON.parse(localStorage.getItem('pos_user') || '{}');
     if (user.avatar) {
-        // Avatar tersimpan di server — build full URL
         const src = user.avatar.startsWith('http') ? user.avatar : SERVER_URL + user.avatar;
         applyAvatarPhoto(document.getElementById('topbarUserInitials'), src);
     }
-    // Tidak ada fallback ke base64 lagi — pakai inisial saja jika belum ada foto
 };
 
 // ===================== NAVIGATION =====================
@@ -81,6 +76,10 @@ window.navigateTo = function (page) {
             anakPage = 1; anakSearch = '';
             container.innerHTML = getDataAnakHTML();
             loadAnakTable();
+            break;
+        case 'rekam-medis':                        // ✅ FIX: pakai container, bukan contentArea
+            container.innerHTML = getRekamMedisHTML();
+            loadRekamMedis();
             break;
         case 'data-ibu':
             ibuPage = 1; ibuSearch = '';
@@ -120,6 +119,9 @@ window.navigateTo = function (page) {
 let isLoggedIn = false;
 let currentPageId = 'dashboard';
 
+// ✅ valid pages list — dipakai di 2 tempat, definisikan sekali
+const VALID_PAGES = ['dashboard','data-anak','rekam-medis','data-ibu','pemeriksaan-gizi','jadwal-imunisasi','growth-tracking','laporan','settings'];
+
 function showLoggedOutUI() {
     isLoggedIn = false;
     document.getElementById('sidebar').classList.add('hidden');
@@ -140,7 +142,6 @@ function showLoggedInUI() {
     document.getElementById('topbarUserName').textContent = user.nama || '—';
     document.getElementById('topbarUserRole').textContent = user.role === 'admin' ? 'Administrator' : 'Bidan';
 
-    // Load avatar dari server (jika ada)
     loadAvatarToTopbar();
 
     document.getElementById('sidebar').classList.remove('hidden');
@@ -149,8 +150,7 @@ function showLoggedInUI() {
     document.getElementById('fabBtn').classList.remove('hidden');
 
     const hash = window.location.hash.slice(1);
-    const valid = ['dashboard','data-anak','data-ibu','pemeriksaan-gizi','jadwal-imunisasi','growth-tracking','laporan','settings'];
-    navigateTo(valid.includes(hash) ? hash : 'dashboard');
+    navigateTo(VALID_PAGES.includes(hash) ? hash : 'dashboard'); // ✅ pakai VALID_PAGES
 }
 
 window.doLogout = function () {
@@ -173,8 +173,7 @@ function closeMobileSidebar() {
 window.addEventListener('hashchange', () => {
     if (!isLoggedIn) return;
     const hash = window.location.hash.slice(1);
-    const valid = ['dashboard','data-anak','data-ibu','pemeriksaan-gizi','jadwal-imunisasi','growth-tracking','laporan','settings'];
-    if (valid.includes(hash)) navigateTo(hash);
+    if (VALID_PAGES.includes(hash)) navigateTo(hash); // ✅ pakai VALID_PAGES
 });
 
 // ===================== INIT =====================
