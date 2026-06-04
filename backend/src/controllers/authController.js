@@ -84,6 +84,21 @@ async function me(req, res, next) {
   } catch (err) { return next(err); }
 }
 
+// PUT /api/auth/profile — update nama & no_hp
+async function updateProfile(req, res, next) {
+  try {
+    const { nama, no_hp } = req.body;
+    if (!nama) return res.status(400).json({ success: false, message: 'Nama tidak boleh kosong.' });
+
+    await pool.query(
+      'UPDATE pengguna SET nama = ?, no_hp = ? WHERE id = ?',
+      [nama, no_hp || null, req.user.id]
+    );
+
+    return res.json({ success: true, message: 'Profil berhasil diperbarui.' });
+  } catch (err) { return next(err); }
+}
+
 // PUT /api/auth/change-password
 async function changePassword(req, res, next) {
   try {
@@ -110,10 +125,9 @@ async function handleUploadAvatar(req, res, next) {
     const filename = `avatar_${req.user.id}_${Date.now()}${path.extname(req.file.originalname)}`;
     const blob = bucket.file(filename);
 
-    // Upload ke GCS
+    // Upload ke GCS — tanpa predefinedAcl agar kompatibel dengan uniform bucket-level access
     await blob.save(req.file.buffer, {
       contentType: req.file.mimetype,
-      public: true,
     });
 
     const avatarUrl = `https://storage.googleapis.com/${process.env.GCS_BUCKET_NAME}/${filename}`;
@@ -183,4 +197,4 @@ async function createUser(req, res, next) {
   } catch (err) { return next(err); }
 }
 
-module.exports = { login, me, changePassword, listUsers, createUser, uploadAvatar, handleUploadAvatar, deleteAvatar };
+module.exports = { login, me, updateProfile, changePassword, listUsers, createUser, uploadAvatar, handleUploadAvatar, deleteAvatar };
