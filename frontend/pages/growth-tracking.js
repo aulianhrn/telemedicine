@@ -64,9 +64,13 @@ window.loadGrowthChart = async function (id) {
     if (!bbWrap || !tbWrap) return;
 
     if (grafik.length === 0) {
-        bbWrap.textContent = 'Belum ada data pemeriksaan';
-        tbWrap.textContent = 'Belum ada data pemeriksaan';
-        return;
+    bbWrap.textContent = 'Belum ada data pemeriksaan';
+    tbWrap.textContent = 'Belum ada data pemeriksaan';
+    const tbl = document.getElementById('growthTable');
+    const inner = document.getElementById('growthTableInner');
+    if (tbl) tbl.style.display = 'none';
+    if (inner) inner.innerHTML = '';
+    return;
     }
 
     const labels = grafik.map(g => `${g.umur_bulan} bln`);
